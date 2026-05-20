@@ -93,15 +93,30 @@ APP_TOOLBAR_ACTIONS: List[ToolbarAction] = [
 ]
 
 WORKBENCH_ACTIONS: List[WorkbenchAction] = [
-    WorkbenchAction("optimize_only", "优选", "本地直连测速", "RUN", "#2563eb"),
-    WorkbenchAction("optimize_sync", "自动上传", "完成后同步", "AUTO", "#0f766e"),
-    WorkbenchAction("sync_only", "同步", "当前订阅", "GH", "#16a34a"),
-    WorkbenchAction("proxy_test", "测代理", "验证通道", "TEST", "#0f766e"),
-    WorkbenchAction("stop_task", "停止", "中断任务", "STOP", "#dc2626"),
-    WorkbenchAction("save_config", "保存", "写回配置", "SAVE", "#2563eb"),
-    WorkbenchAction("refresh_dashboard", "刷新", "重载状态", "REF", "#475569"),
+    WorkbenchAction("optimize_only", "只运行优选", "断开 VPN 后本地直连测速", "RUN", "#2563eb"),
+    WorkbenchAction("optimize_sync", "优选后自动上传", "完成后按设置同步到 GitHub", "AUTO", "#0f766e"),
+    WorkbenchAction("sync_only", "上传到 GitHub", "只同步当前 ip.txt", "GH", "#16a34a"),
+    WorkbenchAction("proxy_test", "测试 GitHub 代理", "只验证代理连通性", "TEST", "#0f766e"),
+    WorkbenchAction("stop_task", "停止任务", "中断正在运行的流程", "STOP", "#dc2626"),
+    WorkbenchAction("save_config", "保存设置", "写回 config.json", "SAVE", "#2563eb"),
+    WorkbenchAction("refresh_dashboard", "刷新状态", "重新读取状态", "REF", "#475569"),
     WorkbenchAction("open_output_folder", "输出目录", "查看备份", "DIR", "#7c3aed"),
 ]
+
+WORKBENCH_PRIMARY_ACTIONS = ["optimize_only", "optimize_sync", "sync_only", "proxy_test"]
+WORKBENCH_SECONDARY_ACTIONS = ["stop_task", "save_config", "refresh_dashboard", "open_output_folder"]
+WORKBENCH_ACTION_BY_KEY = {action.key: action for action in WORKBENCH_ACTIONS}
+
+COCKPIT_LAYOUT = {
+    "card_radius": 28,
+    "panel_radius": 30,
+    "chip_radius": 21,
+    "main_task_height": 360,
+    "action_tile_height": 108,
+    "compact_tool_height": 42,
+    "setting_row_height": 100,
+    "setting_description_wrap": 600,
+}
 
 SETTINGS_FIELD_GROUPS: Dict[str, List[str]] = {
     "常用": [
@@ -1153,14 +1168,14 @@ class DesktopApp:
             frame,
             fill=COLORS["card"],
             border="#d8e1ec",
-            radius=20,
+            radius=COCKPIT_LAYOUT["card_radius"],
             shadow=True,
             cache_key=f"card-{id(frame)}",
         )
         if title:
-            self.tk.Label(frame, text=title, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 11, "bold")).pack(anchor="w", padx=padding, pady=(padding, 4))
+            self.tk.Label(frame, text=title, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 12, "bold")).pack(anchor="w", padx=padding, pady=(padding, 4))
         if subtitle:
-            self.tk.Label(frame, text=subtitle, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9), justify="left", anchor="w", wraplength=520).pack(anchor="w", padx=padding, pady=(0, 4))
+            self.tk.Label(frame, text=subtitle, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9), justify="left", anchor="w", wraplength=720).pack(anchor="w", padx=padding, pady=(0, 4))
         return frame
 
     def _install_rounded_surface(
@@ -1377,6 +1392,27 @@ class DesktopApp:
         button.bind("<Leave>", lambda _event: animate_to(0.0), add="+")
         return button
 
+    def _pill_label(self, parent: Any, text: str, fill: str, fg: str, border: str | None = None) -> Any:
+        height = 34
+        width = max(76, len(text) * 14 + 28)
+        parent_bg = parent.cget("bg") if hasattr(parent, "cget") else COLORS["card"]
+        pill = self.tk.Canvas(parent, width=width + 2, height=height + 2, bg=parent_bg, bd=0, highlightthickness=0)
+        image = render_rounded_surface(
+            width,
+            height,
+            fill,
+            border or fill,
+            radius=height // 2,
+            shadow=False,
+        )
+        photo_key = f"pill-{id(pill)}-{text}"
+        photo = ImageTk.PhotoImage(image, master=self.root)
+        self.surface_images[photo_key] = photo
+        pill.create_image(1, 1, image=photo, anchor="nw")
+        pill.create_text((width + 2) // 2, (height + 2) // 2, text=text, fill=fg, font=("Microsoft YaHei UI", 9, "bold"))
+        pill.image = photo
+        return pill
+
     def _entry_control(self, parent: Any, variable: Any, width: int = 256) -> Any:
         control = self.tk.Frame(parent, bg=COLORS["card"], width=width, height=38, bd=0, highlightthickness=0)
         control.grid_propagate(False)
@@ -1385,7 +1421,7 @@ class DesktopApp:
             control,
             fill="#eef3f8",
             border="#ccd6e3",
-            radius=11,
+            radius=14,
             shadow=False,
             cache_key=f"entry-control-{id(control)}",
         )
@@ -1480,12 +1516,14 @@ class DesktopApp:
             highlightbackground="#d8e2ee",
             highlightthickness=0,
             bd=0,
+            height=COCKPIT_LAYOUT["action_tile_height"],
         )
+        tile.grid_propagate(False)
         self._install_rounded_surface(
             tile,
             fill="#ffffff",
             border=base_border,
-            radius=18,
+            radius=24,
             shadow=True,
             cache_key=f"action-{action.key}",
         )
@@ -1501,19 +1539,19 @@ class DesktopApp:
             f"action-{action.key}",
             action.icon,
             action.accent,
-            size=42,
+            size=46,
             background=accent_surface(action.accent),
         )
         icon = self.tk.Label(tile, image=badge, bg="#ffffff")
         icon.image = badge
-        icon.grid(row=0, column=0, rowspan=2, sticky="nw", padx=12, pady=12)
+        icon.grid(row=0, column=0, rowspan=2, sticky="nw", padx=14, pady=16)
 
         text_stack = self.tk.Frame(tile, bg="#ffffff")
-        text_stack.grid(row=0, column=1, sticky="ew", padx=(0, 12), pady=(12, 0))
-        title_label = self.tk.Label(text_stack, text=action.label, bg="#ffffff", fg=COLORS["text"], font=("Microsoft YaHei UI", 9, "bold"), justify="left", anchor="w", wraplength=110)
+        text_stack.grid(row=0, column=1, sticky="ew", padx=(0, 16), pady=(16, 0))
+        title_label = self.tk.Label(text_stack, text=action.label, bg="#ffffff", fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold"), justify="left", anchor="w", wraplength=230)
         title_label.pack(anchor="w")
-        hint_label = self.tk.Label(text_stack, text=action.hint, bg="#ffffff", fg=COLORS["muted"], font=("Microsoft YaHei UI", 8), justify="left", anchor="w", wraplength=110)
-        hint_label.pack(anchor="w", pady=(3, 0))
+        hint_label = self.tk.Label(text_stack, text=action.hint, bg="#ffffff", fg=COLORS["muted"], font=("Microsoft YaHei UI", 9), justify="left", anchor="w", wraplength=240)
+        hint_label.pack(anchor="w", pady=(5, 0))
 
         hover_children = [icon, text_stack, title_label, hint_label]
 
@@ -1571,75 +1609,150 @@ class DesktopApp:
         tile.bind("<Leave>", lambda _event: animate_tile(0.0), add="+")
         return tile
 
+    def _status_chip(
+        self,
+        parent: Any,
+        title: str,
+        variable: Any,
+        detail_variable: Any | None,
+        accent: str,
+        icon: str,
+    ) -> Any:
+        chip = self.tk.Frame(parent, bg=parent.cget("bg") if hasattr(parent, "cget") else COLORS["bg"], height=76)
+        chip.grid_propagate(False)
+        chip.grid_columnconfigure(1, weight=1)
+        self._install_rounded_surface(
+            chip,
+            fill="#ffffff",
+            border="#dfe8f3",
+            radius=24,
+            shadow=True,
+            cache_key=f"status-chip-{title}-{id(chip)}",
+        )
+        badge = self._badge_photo(
+            f"status-chip-{title}-{icon}",
+            icon,
+            accent,
+            size=38,
+            background=accent_surface(accent),
+        )
+        icon_label = self.tk.Label(chip, image=badge, bg="#ffffff", bd=0)
+        icon_label.image = badge
+        icon_label.grid(row=0, column=0, rowspan=2, sticky="w", padx=(14, 10), pady=18)
+        self.tk.Label(chip, text=title, bg="#ffffff", fg=COLORS["muted"], font=("Microsoft YaHei UI", 8, "bold")).grid(row=0, column=1, sticky="sw", padx=(0, 12), pady=(14, 0))
+        value_label = self.tk.Label(chip, textvariable=variable, bg="#ffffff", fg=accent, font=("Microsoft YaHei UI", 11, "bold"), anchor="w")
+        value_label.grid(row=1, column=1, sticky="nw", padx=(0, 12), pady=(2, 0))
+        if detail_variable is not None:
+            detail_label = self.tk.Label(chip, textvariable=detail_variable, bg="#ffffff", fg=COLORS["muted"], font=("Microsoft YaHei UI", 8), anchor="e", justify="right", wraplength=150)
+            detail_label.grid(row=0, column=2, rowspan=2, sticky="e", padx=(0, 14))
+        chip.value_label = value_label
+        return chip
+
+    def _build_compact_tool_button(self, parent: Any, action: WorkbenchAction, command: Callable[[], None]) -> Any:
+        variant = "danger" if action.key == "stop_task" else "secondary"
+        label = f"{action.icon}  {action.label}" if action.key != "open_output_folder" else action.label
+        return self._primary_button(parent, label, command, variant=variant)
+
+    def _build_main_task_card(self, parent: Any) -> Any:
+        card = self._card(parent)
+        card.configure(height=COCKPIT_LAYOUT["main_task_height"])
+        card.grid_propagate(False)
+        card.grid_columnconfigure(1, weight=1)
+        card.grid_rowconfigure(1, weight=1)
+
+        badge = self._badge_photo("main-task-badge", "cf", COLORS["blue"], size=62, background=COLORS["blue_soft"], border="#bfdbfe")
+        badge_label = self.tk.Label(card, image=badge, bg=COLORS["card"], bd=0)
+        badge_label.image = badge
+        badge_label.grid(row=0, column=0, rowspan=2, sticky="nw", padx=(22, 16), pady=(24, 0))
+
+        header = self.tk.Frame(card, bg=COLORS["card"])
+        header.grid(row=0, column=1, sticky="ew", padx=(0, 22), pady=(22, 0))
+        header.grid_columnconfigure(0, weight=1)
+        title_stack = self.tk.Frame(header, bg=COLORS["card"])
+        title_stack.grid(row=0, column=0, sticky="w")
+        self.tk.Label(title_stack, text="Cloudflare IP 优选任务", bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 16, "bold")).pack(anchor="w")
+        self.tk.Label(title_stack, textvariable=self.banner_text_var, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(anchor="w", pady=(5, 0))
+        chip = self._pill_label(header, "手动流程", "#dcfce7", "#166534", "#bbf7d0")
+        chip.grid(row=0, column=1, sticky="e")
+
+        actions = self.tk.Frame(card, bg=COLORS["card"])
+        actions.grid(row=1, column=1, sticky="nsew", padx=(0, 22), pady=(18, 22))
+        for col in range(2):
+            actions.grid_columnconfigure(col, weight=1, uniform="main-actions")
+        for index, action_key in enumerate(WORKBENCH_PRIMARY_ACTIONS):
+            action = WORKBENCH_ACTION_BY_KEY[action_key]
+            tile = self._build_action_tile(actions, action, lambda key=action.key: self._run_workbench_action(key))
+            tile.grid(row=index // 2, column=index % 2, sticky="nsew", padx=(0 if index % 2 == 0 else 10, 10 if index % 2 == 0 else 0), pady=(0 if index < 2 else 10, 0))
+        return card
+
     def _build_workbench_page(self) -> None:
         page = self.tk.Frame(self.content_host, bg=COLORS["bg"])
         page.grid(row=0, column=0, sticky="nsew")
-        page.grid_columnconfigure(0, weight=3)
-        page.grid_columnconfigure(1, weight=2)
-        page.grid_rowconfigure(1, weight=1)
+        page.grid_columnconfigure(0, weight=5)
+        page.grid_columnconfigure(1, weight=3)
+        page.grid_rowconfigure(2, weight=1)
         self.page_frames["workbench"] = page
 
-        metrics = self.tk.Frame(page, bg=COLORS["bg"])
-        metrics.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 16))
-        for col in range(5):
-            metrics.grid_columnconfigure(col, weight=1, uniform="metrics")
-        vpn_card = self._metric_card(metrics, "VPN/代理提醒", self.vpn_status_var, COLORS["red"], self.vpn_detail_var, icon="VPN")
-        vpn_card.grid(row=0, column=0, sticky="ew", padx=(0, 12))
-        self.status_accent_vars["vpn"] = vpn_card.value_label
-        result_card = self._metric_card(metrics, "当前 ip.txt", self.result_count_var, COLORS["blue_dark"], self.output_updated_var, icon="IP")
-        result_card.grid(row=0, column=1, sticky="ew", padx=6)
-        self.status_accent_vars["result"] = result_card.value_label
-        share_card = self._metric_card(metrics, "443 占比", self.port_share_var, COLORS["teal"], self.result_detail_var, icon="443")
-        share_card.grid(row=0, column=2, sticky="ew", padx=6)
-        github_card = self._metric_card(metrics, "GitHub 上传", self.github_status_var, COLORS["green"], self.github_detail_var, icon="GH")
-        github_card.grid(row=0, column=3, sticky="ew", padx=6)
-        self.status_accent_vars["github"] = github_card.value_label
-        backup_card = self._metric_card(metrics, "备份数量", self.backup_count_var, "#7c3aed", self.backup_detail_var, icon="BAK")
-        backup_card.grid(row=0, column=4, sticky="ew", padx=(12, 0))
+        status_strip = self.tk.Frame(page, bg=COLORS["bg"])
+        status_strip.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 14))
+        for col in range(4):
+            status_strip.grid_columnconfigure(col, weight=1, uniform="status-strip")
+        vpn_chip = self._status_chip(status_strip, "VPN/代理", self.vpn_status_var, self.vpn_detail_var, COLORS["red"], "VPN")
+        vpn_chip.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        self.status_accent_vars["vpn"] = vpn_chip.value_label
+        result_chip = self._status_chip(status_strip, "当前 ip.txt", self.result_count_var, self.output_updated_var, COLORS["blue_dark"], "IP")
+        result_chip.grid(row=0, column=1, sticky="ew", padx=8)
+        self.status_accent_vars["result"] = result_chip.value_label
+        share_chip = self._status_chip(status_strip, "443 占比", self.port_share_var, self.result_detail_var, COLORS["teal"], "443")
+        share_chip.grid(row=0, column=2, sticky="ew", padx=8)
+        github_chip = self._status_chip(status_strip, "GitHub", self.github_status_var, self.github_detail_var, COLORS["green"], "GH")
+        github_chip.grid(row=0, column=3, sticky="ew", padx=(8, 0))
+        self.status_accent_vars["github"] = github_chip.value_label
 
         left = self.tk.Frame(page, bg=COLORS["bg"])
-        left.grid(row=1, column=0, sticky="nsew", padx=(0, 14))
+        left.grid(row=1, column=0, rowspan=2, sticky="nsew", padx=(0, 14))
         left.grid_rowconfigure(2, weight=1)
         left.grid_columnconfigure(0, weight=1)
 
-        action_card = self._card(left, "快捷操作", "断 VPN 后优选，连代理后上传。")
-        action_card.grid(row=0, column=0, sticky="ew", pady=(0, 14))
-        actions = self.tk.Frame(action_card, bg=COLORS["card"])
-        actions.pack(fill="x", padx=12, pady=(6, 14))
-        for col in range(4):
-            actions.grid_columnconfigure(col, weight=1, uniform="actions")
-        for index, action in enumerate(WORKBENCH_ACTIONS):
-            tile = self._build_action_tile(
-                actions,
-                action,
-                lambda key=action.key: self._run_workbench_action(key),
-            )
-            row = index // 4
-            col = index % 4
-            tile.grid(row=row, column=col, sticky="nsew", padx=6, pady=6)
+        task_card = self._build_main_task_card(left)
+        task_card.grid(row=0, column=0, sticky="ew", pady=(0, 14))
 
-        preview_card = self._card(left, "最新结果预览", "客户端还会二次优选，这里优先保持 443 输出稳定。")
-        preview_card.grid(row=1, column=0, sticky="ew", pady=(0, 14))
+        tool_bar = self._card(left, "工具")
+        tool_bar.grid(row=1, column=0, sticky="ew", pady=(0, 14))
+        tools = self.tk.Frame(tool_bar, bg=COLORS["card"])
+        tools.pack(fill="x", padx=18, pady=(8, 18))
+        for action_key in WORKBENCH_SECONDARY_ACTIONS:
+            action = WORKBENCH_ACTION_BY_KEY[action_key]
+            button = self._build_compact_tool_button(tools, action, lambda key=action.key: self._run_workbench_action(key))
+            button.pack(side="left", padx=(0, 10))
+
+        preview_card = self._card(left, "最新结果预览", "443 优先输出，客户端继续二次优选。")
+        preview_card.grid(row=2, column=0, sticky="nsew")
         preview_meta = self.tk.Frame(preview_card, bg=COLORS["card"])
-        preview_meta.pack(fill="x", padx=14, pady=(4, 10))
+        preview_meta.pack(fill="x", padx=18, pady=(4, 10))
         self.tk.Label(preview_meta, text="443 占比", bg=COLORS["card"], fg=COLORS["muted"]).pack(side="left")
         self.tk.Label(preview_meta, textvariable=self.port_share_var, bg=COLORS["card"], fg=COLORS["blue_dark"], font=("Segoe UI", 12, "bold")).pack(side="left", padx=(8, 20))
         self.tk.Label(preview_meta, text="更新时间", bg=COLORS["card"], fg=COLORS["muted"]).pack(side="left")
         self.tk.Label(preview_meta, textvariable=self.output_updated_var, bg=COLORS["card"], fg=COLORS["text"]).pack(side="left", padx=(8, 0))
         self.result_preview_list = self.tk.Listbox(preview_card, height=8, relief="flat", bd=0, bg="#f8fbff", fg=COLORS["text"], font=("Consolas", 10))
-        self.result_preview_list.pack(fill="x", padx=14, pady=(0, 14))
+        self.result_preview_list.pack(fill="both", expand=True, padx=18, pady=(0, 18))
 
-        log_card = self._card(left, "运行日志")
-        log_card.grid(row=2, column=0, sticky="nsew")
+        right = self.tk.Frame(page, bg=COLORS["bg"])
+        right.grid(row=1, column=1, rowspan=2, sticky="nsew")
+        right.grid_columnconfigure(0, weight=1)
+        right.grid_rowconfigure(1, weight=1)
+
+        preflight_card = self._card(right, "运行前检查")
+        preflight_card.grid(row=0, column=0, sticky="nsew", pady=(0, 14))
+        self.preflight_text = self.scrolledtext.ScrolledText(preflight_card, wrap="word", height=16, state="disabled", relief="flat", bg="#f8fbff")
+        self.preflight_text.pack(fill="both", expand=True, padx=18, pady=(8, 18))
+
+        log_card = self._card(right, "运行日志")
+        log_card.grid(row=1, column=0, sticky="nsew")
         log_card.grid_rowconfigure(1, weight=1)
         log_card.grid_columnconfigure(0, weight=1)
         self.dashboard_log_text = self.scrolledtext.ScrolledText(log_card, wrap="word", height=8, state="disabled", relief="flat", bg="#f8fbff")
-        self.dashboard_log_text.pack(fill="both", expand=True, padx=14, pady=(8, 14))
-
-        right = self._card(page, "运行前检查")
-        right.grid(row=1, column=1, sticky="nsew")
-        self.preflight_text = self.scrolledtext.ScrolledText(right, wrap="word", height=18, state="disabled", relief="flat", bg="#f8fbff")
-        self.preflight_text.pack(fill="both", expand=True, padx=14, pady=(8, 14))
+        self.dashboard_log_text.pack(fill="both", expand=True, padx=18, pady=(8, 18))
 
     def _build_results_page(self) -> None:
         page = self.tk.Frame(self.content_host, bg=COLORS["bg"])
@@ -1739,24 +1852,25 @@ class DesktopApp:
 
     def _build_setting_row(self, parent: Any, spec: FieldSpec) -> Any:
         row = self.tk.Frame(parent, bg=COLORS["card"], bd=0, highlightthickness=0)
-        row.configure(height=82)
+        row.configure(height=COCKPIT_LAYOUT["setting_row_height"])
         row.grid_propagate(False)
         row.grid_columnconfigure(0, weight=1)
         row.grid_columnconfigure(1, weight=0)
+        row.grid_rowconfigure(0, weight=1)
         label_stack = self.tk.Frame(row, bg=COLORS["card"])
-        label_stack.grid(row=0, column=0, sticky="ew", padx=22, pady=13)
-        self.tk.Label(label_stack, text=spec.label, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold"), justify="left", anchor="w", wraplength=360).pack(anchor="w")
-        self.tk.Label(label_stack, text=SETTING_DESCRIPTIONS.get(spec.name, spec.name), bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9), justify="left", anchor="w", wraplength=440).pack(anchor="w", pady=(5, 0))
+        label_stack.grid(row=0, column=0, sticky="ew", padx=24, pady=16)
+        self.tk.Label(label_stack, text=spec.label, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold"), justify="left", anchor="w", wraplength=420).pack(anchor="w")
+        self.tk.Label(label_stack, text=SETTING_DESCRIPTIONS.get(spec.name, spec.name), bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9), justify="left", anchor="w", wraplength=COCKPIT_LAYOUT["setting_description_wrap"]).pack(anchor="w", pady=(7, 0))
 
         if spec.kind == "bool":
             var = self.tk.BooleanVar(value=False)
             widget = self._toggle_control(row, var)
-            widget.grid(row=0, column=1, sticky="e", padx=(16, 22), pady=22)
+            widget.grid(row=0, column=1, sticky="e", padx=(20, 24), pady=30)
         else:
             var = self.tk.StringVar(value="")
-            widget = self._entry_control(row, var)
-            widget.grid(row=0, column=1, sticky="e", padx=(16, 22), pady=21)
-        self.tk.Frame(row, bg="#e8eef6", height=1).grid(row=1, column=0, columnspan=2, sticky="ew", padx=22)
+            widget = self._entry_control(row, var, width=300)
+            widget.grid(row=0, column=1, sticky="e", padx=(20, 24), pady=30)
+        self.tk.Frame(row, bg="#e8eef6", height=1).grid(row=1, column=0, columnspan=2, sticky="ew", padx=24)
         self.form_vars[spec.name] = var
         return row
 
@@ -1769,7 +1883,7 @@ class DesktopApp:
             list_card,
             fill=COLORS["card"],
             border="#e2e8f0",
-            radius=20,
+            radius=COCKPIT_LAYOUT["card_radius"],
             shadow=False,
             cache_key=f"settings-list-{id(parent)}",
         )

@@ -230,9 +230,28 @@ class DesktopAppHelperTests(unittest.TestCase):
             [action.icon for action in desktop_app.WORKBENCH_ACTIONS],
         )
         self.assertEqual(
-            ["优选", "自动上传", "同步", "测代理", "停止", "保存", "刷新", "输出目录"],
+            ["只运行优选", "优选后自动上传", "上传到 GitHub", "测试 GitHub 代理", "停止任务", "保存设置", "刷新状态", "输出目录"],
             [action.label for action in desktop_app.WORKBENCH_ACTIONS],
         )
+
+    def test_workbench_actions_split_into_main_task_and_compact_tools(self):
+        self.assertEqual(
+            ["optimize_only", "optimize_sync", "sync_only", "proxy_test"],
+            desktop_app.WORKBENCH_PRIMARY_ACTIONS,
+        )
+        self.assertEqual(
+            ["stop_task", "save_config", "refresh_dashboard", "open_output_folder"],
+            desktop_app.WORKBENCH_SECONDARY_ACTIONS,
+        )
+
+    def test_cockpit_layout_tokens_prevent_square_blocks_and_text_clipping(self):
+        layout = desktop_app.COCKPIT_LAYOUT
+
+        self.assertGreaterEqual(layout["card_radius"], 26)
+        self.assertGreaterEqual(layout["main_task_height"], 220)
+        self.assertGreaterEqual(layout["action_tile_height"], 104)
+        self.assertGreaterEqual(layout["setting_row_height"], 96)
+        self.assertGreaterEqual(layout["setting_description_wrap"], 560)
 
     def test_render_badge_image_returns_square_rgba_asset(self):
         image = desktop_app.render_badge_image("RUN", "#2563eb")
