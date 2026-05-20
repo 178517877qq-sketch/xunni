@@ -227,6 +227,24 @@ def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
     return ImageColor.getrgb(hex_color)
 
 
+def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
+    return "#{:02x}{:02x}{:02x}".format(*rgb)
+
+
+def _blend_rgb(a: tuple[int, int, int], b: tuple[int, int, int], t: float) -> tuple[int, int, int]:
+    t = max(0.0, min(1.0, t))
+    return tuple(int(round(a[i] * (1 - t) + b[i] * t)) for i in range(3))
+
+
+def _blend_hex(a: str, b: str, t: float) -> str:
+    return _rgb_to_hex(_blend_rgb(_hex_to_rgb(a), _hex_to_rgb(b), t))
+
+
+def _ease_out_cubic(t: float) -> float:
+    t = max(0.0, min(1.0, t))
+    return 1 - pow(1 - t, 3)
+
+
 def _load_badge_font(size: int) -> ImageFont.ImageFont:
     windir = Path(os.environ.get("WINDIR", r"C:\Windows"))
     candidates = [
@@ -321,6 +339,9 @@ def render_rounded_surface(
     border: str,
     radius: int = 20,
     shadow: bool = True,
+    shadow_alpha: int = 34,
+    shadow_offset: tuple[int, int] = (4, 6),
+    shadow_blur: int = 9,
 ) -> Image.Image:
     width = max(2, int(width))
     height = max(2, int(height))
@@ -329,13 +350,13 @@ def render_rounded_surface(
     if shadow:
         shadow_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         shadow_draw = ImageDraw.Draw(shadow_layer)
-        shadow_alpha = 34
+        offset_x, offset_y = shadow_offset
         shadow_draw.rounded_rectangle(
-            [4, 6, width - 6, height - 5],
+            [offset_x, offset_y, width - max(2, offset_x + 2), height - max(2, offset_y + 1)],
             radius=max(1, radius),
-            fill=(15, 23, 42, shadow_alpha),
+            fill=(15, 23, 42, max(0, min(255, shadow_alpha))),
         )
-        shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(9))
+        shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(max(1, shadow_blur)))
         image = Image.alpha_composite(image, shadow_layer)
 
     draw = ImageDraw.Draw(image)
@@ -1085,6 +1106,9 @@ class DesktopApp:
         widget._surface_border = border
         widget._surface_radius = radius
         widget._surface_shadow = shadow
+        widget._surface_shadow_alpha = 34 if shadow else 0
+        widget._surface_shadow_offset = (4, 6)
+        widget._surface_shadow_blur = 9
         widget._surface_cache_key = cache_key or f"surface-{id(widget)}"
 
         def redraw(_event: Any | None = None) -> None:
@@ -1099,6 +1123,9 @@ class DesktopApp:
                 widget._surface_border,
                 radius=widget._surface_radius,
                 shadow=widget._surface_shadow,
+                shadow_alpha=getattr(widget, "_surface_shadow_alpha", 34),
+                shadow_offset=getattr(widget, "_surface_shadow_offset", (4, 6)),
+                shadow_blur=getattr(widget, "_surface_shadow_blur", 9),
             )
             cache_key_local = (
                 f"{widget._surface_cache_key}:{width}x{height}:"
@@ -1174,39 +1201,55 @@ class DesktopApp:
     ) -> Any:
         chosen_variant = variant or ("primary" if primary else "secondary")
         width = max(58, len(text) * 14 + 30)
-        height = 38
+        height = 36
+        canvas_width = width + 4
+        canvas_height = height + 4
         parent_bg = parent.cget("bg") if hasattr(parent, "cget") else COLORS["bg"]
         button = self.tk.Canvas(
             parent,
-            width=width,
-            height=height,
+            width=canvas_width,
+            height=canvas_height,
             bg=parent_bg,
             bd=0,
             highlightthickness=0,
             cursor="hand2",
         )
+        button._button_variant = chosen_variant
+        button._hover_progress = 0.0
+        button._hover_anim_job = None
+        button._button_text = text
 
-        def draw_button(next_variant: str, hover: bool = False) -> None:
+        def draw_button(progress: float = 0.0, pressed: bool = False) -> None:
+            progress = max(0.0, min(1.0, progress))
+            next_variant = getattr(button, "_button_variant", chosen_variant)
             style = BUTTON_VARIANTS[next_variant]
-            fill = style["activebackground"] if hover else style["bg"]
-            fg = style["activeforeground"] if hover else style["fg"]
+            fill = _blend_hex(style["bg"], style["activebackground"], progress)
+            fg = _blend_hex(style["fg"], style["activeforeground"], progress)
+            border = _blend_hex(style["border"], style["activebackground"], progress * 0.45)
+            shadow_alpha = int(round(24 + (18 if next_variant in {"primary", "secondary"} else 10) * progress))
+            shadow_blur = 8 + int(round(progress))
+            shadow_offset = (4, 6 - int(round(progress * 2)) + (1 if pressed else 0))
             image = render_rounded_surface(
                 width,
                 height,
                 fill,
-                style["border"],
+                border,
                 radius=height // 2,
-                shadow=next_variant in {"primary", "secondary"},
+                shadow=True,
+                shadow_alpha=shadow_alpha,
+                shadow_offset=shadow_offset,
+                shadow_blur=shadow_blur,
             )
-            photo_key = f"button-{id(button)}:{next_variant}:{hover}"
+            photo_key = f"button-{id(button)}:{next_variant}:{progress:.2f}"
             photo = ImageTk.PhotoImage(image, master=self.root)
             self.surface_images[photo_key] = photo
             button.delete("all")
-            button.create_image(0, 0, image=photo, anchor="nw")
+            lift = int(round(progress * 2)) - (1 if pressed else 0)
+            button.create_image(2, 2 - lift, image=photo, anchor="nw")
             button.create_text(
-                width // 2,
-                height // 2,
-                text=text,
+                canvas_width // 2,
+                canvas_height // 2 - lift,
+                text=button._button_text,
                 fill=fg,
                 font=("Microsoft YaHei UI", 10, "bold"),
             )
@@ -1214,13 +1257,47 @@ class DesktopApp:
 
         def set_variant(next_variant: str) -> None:
             button._button_variant = next_variant
-            draw_button(next_variant, hover=False)
+            button._hover_progress = 0.0
+            draw_button(0.0)
+
+        def animate_to(target: float) -> None:
+            target = max(0.0, min(1.0, target))
+            if button._hover_anim_job is not None:
+                try:
+                    button.after_cancel(button._hover_anim_job)
+                except Exception:
+                    pass
+                button._hover_anim_job = None
+            start = float(getattr(button, "_hover_progress", 0.0))
+            if abs(target - start) < 0.01:
+                button._hover_progress = target
+                draw_button(target)
+                return
+
+            start_time = time.monotonic()
+            duration_ms = 120
+
+            def step() -> None:
+                elapsed = (time.monotonic() - start_time) * 1000
+                t = min(1.0, elapsed / duration_ms)
+                eased = _ease_out_cubic(t)
+                current = start + (target - start) * eased
+                button._hover_progress = current
+                draw_button(current)
+                if t < 1.0:
+                    button._hover_anim_job = button.after(16, step)
+                else:
+                    button._hover_anim_job = None
+
+            step()
 
         button._set_button_variant = set_variant
         set_variant(chosen_variant)
+        button.bind("<ButtonPress-1>", lambda _event: draw_button(float(getattr(button, "_hover_progress", 0.0)), pressed=True), add="+")
+        button.bind("<ButtonRelease-1>", lambda _event: draw_button(float(getattr(button, "_hover_progress", 0.0)), pressed=False), add="+")
         button.bind("<Button-1>", lambda _event, cb=command: cb())
-        button.bind("<Enter>", lambda _event: draw_button(getattr(button, "_button_variant", chosen_variant), hover=True), add="+")
-        button.bind("<Leave>", lambda _event: draw_button(getattr(button, "_button_variant", chosen_variant), hover=False), add="+")
+        button.bind("<Enter>", lambda _event: animate_to(1.0), add="+")
+        button.bind("<Leave>", lambda _event: animate_to(0.0), add="+")
         return button
 
     def _bind_click_recursive(self, widget: Any, command: Callable[[], None]) -> None:
@@ -1247,6 +1324,11 @@ class DesktopApp:
         )
         tile.grid_columnconfigure(1, weight=1)
         tile.grid_rowconfigure(0, weight=1)
+        tile._hover_progress = 0.0
+        tile._hover_anim_job = None
+        tile._surface_shadow_alpha = 30
+        tile._surface_shadow_offset = (4, 6)
+        tile._surface_shadow_blur = 9
 
         badge = self._badge_photo(
             f"action-{action.key}",
@@ -1261,10 +1343,65 @@ class DesktopApp:
 
         text_stack = self.tk.Frame(tile, bg="#ffffff")
         text_stack.grid(row=0, column=1, sticky="ew", padx=(0, 12), pady=(12, 0))
-        self.tk.Label(text_stack, text=action.label, bg="#ffffff", fg=COLORS["text"], font=("Microsoft YaHei UI", 9, "bold"), justify="left", anchor="w", wraplength=110).pack(anchor="w")
-        self.tk.Label(text_stack, text=action.hint, bg="#ffffff", fg=COLORS["muted"], font=("Microsoft YaHei UI", 8), justify="left", anchor="w", wraplength=110).pack(anchor="w", pady=(3, 0))
+        title_label = self.tk.Label(text_stack, text=action.label, bg="#ffffff", fg=COLORS["text"], font=("Microsoft YaHei UI", 9, "bold"), justify="left", anchor="w", wraplength=110)
+        title_label.pack(anchor="w")
+        hint_label = self.tk.Label(text_stack, text=action.hint, bg="#ffffff", fg=COLORS["muted"], font=("Microsoft YaHei UI", 8), justify="left", anchor="w", wraplength=110)
+        hint_label.pack(anchor="w", pady=(3, 0))
+
+        hover_children = [icon, text_stack, title_label, hint_label]
+
+        def draw_tile(progress: float) -> None:
+            progress = max(0.0, min(1.0, progress))
+            fill = _blend_hex("#ffffff", "#f7fbff", progress)
+            border = _blend_hex("#e1e8f2", "#bfd5f2", progress)
+            shadow_alpha = int(round(28 + 8 * progress))
+            shadow_blur = 8 + int(round(progress))
+            shadow_offset = (4, 6 - int(round(progress)))
+            tile._surface_fill = fill
+            tile._surface_border = border
+            tile._surface_shadow = True
+            tile._surface_shadow_alpha = shadow_alpha
+            tile._surface_shadow_offset = shadow_offset
+            tile._surface_shadow_blur = shadow_blur
+            if hasattr(tile, "_surface_redraw"):
+                tile._surface_redraw()
+            for child in hover_children:
+                child.configure(bg=fill)
+
+        def animate_tile(target: float) -> None:
+            target = max(0.0, min(1.0, target))
+            if tile._hover_anim_job is not None:
+                try:
+                    tile.after_cancel(tile._hover_anim_job)
+                except Exception:
+                    pass
+                tile._hover_anim_job = None
+            start = float(getattr(tile, "_hover_progress", 0.0))
+            if abs(target - start) < 0.01:
+                tile._hover_progress = target
+                draw_tile(target)
+                return
+
+            start_time = time.monotonic()
+            duration_ms = 110
+
+            def step() -> None:
+                elapsed = (time.monotonic() - start_time) * 1000
+                t = min(1.0, elapsed / duration_ms)
+                eased = _ease_out_cubic(t)
+                current = start + (target - start) * eased
+                tile._hover_progress = current
+                draw_tile(current)
+                if t < 1.0:
+                    tile._hover_anim_job = tile.after(16, step)
+                else:
+                    tile._hover_anim_job = None
+
+            step()
 
         self._bind_click_recursive(tile, command)
+        tile.bind("<Enter>", lambda _event: animate_tile(1.0), add="+")
+        tile.bind("<Leave>", lambda _event: animate_tile(0.0), add="+")
         return tile
 
     def _build_workbench_page(self) -> None:
