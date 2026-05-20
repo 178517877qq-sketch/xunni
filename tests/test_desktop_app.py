@@ -249,7 +249,7 @@ class DesktopAppHelperTests(unittest.TestCase):
 
         self.assertGreaterEqual(layout["card_radius"], 26)
         self.assertGreaterEqual(layout["main_task_height"], 220)
-        self.assertGreaterEqual(layout["action_tile_height"], 104)
+        self.assertGreaterEqual(layout["action_tile_height"], 92)
         self.assertGreaterEqual(layout["setting_row_height"], 96)
         self.assertGreaterEqual(layout["setting_description_wrap"], 560)
 
@@ -331,6 +331,16 @@ class DesktopAppHelperTests(unittest.TestCase):
             ["status_summary", "preflight", "activity_log"],
             desktop_app.COCKPIT_WORKBENCH_LAYOUT["right"],
         )
+
+    def test_cockpit_structure_matches_reference_spacing(self):
+        structure = desktop_app.COCKPIT_STRUCTURE
+
+        self.assertGreaterEqual(structure["window_height"], 900)
+        self.assertGreaterEqual(structure["main_top_padding"], 50)
+        self.assertEqual(["header", "tabs", "toolbar", "content"], structure["main_rows"])
+        self.assertGreaterEqual(structure["toolbar_height"], 62)
+        self.assertLessEqual(structure["sidebar_rail_height"], 560)
+        self.assertTrue(structure["sidebar_has_action_button"])
 
     def test_render_badge_image_returns_square_rgba_asset(self):
         image = desktop_app.render_badge_image("RUN", "#2563eb")

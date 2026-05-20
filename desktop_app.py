@@ -111,8 +111,8 @@ COCKPIT_LAYOUT = {
     "card_radius": 28,
     "panel_radius": 30,
     "chip_radius": 21,
-    "main_task_height": 360,
-    "action_tile_height": 108,
+    "main_task_height": 320,
+    "action_tile_height": 96,
     "compact_tool_height": 42,
     "setting_row_height": 100,
     "setting_description_wrap": 600,
@@ -161,6 +161,15 @@ PAGE_TAB_ICONS = {
 COCKPIT_WORKBENCH_LAYOUT = {
     "left": ["main_task", "latest_result"],
     "right": ["status_summary", "preflight", "activity_log"],
+}
+
+COCKPIT_STRUCTURE = {
+    "window_height": 900,
+    "main_top_padding": 54,
+    "main_rows": ["header", "tabs", "toolbar", "content"],
+    "toolbar_height": 66,
+    "sidebar_rail_height": 548,
+    "sidebar_has_action_button": True,
 }
 
 SETTINGS_FIELD_GROUPS: Dict[str, List[str]] = {
@@ -1120,8 +1129,8 @@ class DesktopApp:
 
         self.root = tk.Tk()
         self.root.title("cfnb 手动优选工具")
-        self.root.geometry("1280x860")
-        self.root.minsize(1120, 740)
+        self.root.geometry(f"1280x{COCKPIT_STRUCTURE['window_height']}")
+        self.root.minsize(1120, 780)
         self.root.configure(bg=COLORS["bg"])
 
         self.runner = ProcessRunner()
@@ -1194,12 +1203,15 @@ class DesktopApp:
         shell.grid_rowconfigure(0, weight=1)
         self._install_cockpit_background(shell, "shell")
 
-        sidebar_host = tk.Frame(shell, bg=COCKPIT_THEME["background_base"], width=102)
+        sidebar_host = tk.Frame(shell, bg=COCKPIT_THEME["background_base"], width=106)
         sidebar_host.grid(row=0, column=0, sticky="ns")
         sidebar_host.grid_propagate(False)
 
-        sidebar = tk.Frame(sidebar_host, bg=COLORS["bg"], width=68, height=610, highlightthickness=0)
-        sidebar.pack(expand=True, padx=(24, 10))
+        side_action = self._primary_button(sidebar_host, "刷新", self._refresh_dashboard, variant="primary")
+        side_action.pack(padx=(24, 10), pady=(126, 12))
+
+        sidebar = tk.Frame(sidebar_host, bg=COLORS["bg"], width=68, height=COCKPIT_STRUCTURE["sidebar_rail_height"], highlightthickness=0)
+        sidebar.pack(padx=(24, 10))
         sidebar.pack_propagate(False)
         self._install_rounded_surface(
             sidebar,
@@ -1210,13 +1222,10 @@ class DesktopApp:
             cache_key="sidebar-shell",
         )
 
-        logo = ImageTk.PhotoImage(render_logo_image(44), master=self.root)
-        self.badge_images["app-logo"] = logo
-        logo_label = tk.Label(sidebar, image=logo, bg=COLORS["sidebar"], bd=0)
-        logo_label.image = logo
-        logo_label.pack(pady=(30, 28))
+        nav_stack = tk.Frame(sidebar, bg=COLORS["sidebar"])
+        nav_stack.pack(anchor="n", pady=(30, 0))
         for item in NAV_ITEMS:
-            nav_shell = tk.Frame(sidebar, bg=COLORS["sidebar"], width=44, height=44)
+            nav_shell = tk.Frame(nav_stack, bg=COLORS["sidebar"], width=44, height=44)
             nav_shell.pack(padx=12, pady=10)
             nav_shell.pack_propagate(False)
             self._install_rounded_surface(
@@ -1227,14 +1236,9 @@ class DesktopApp:
                 shadow=False,
                 cache_key=f"nav-shell-{item.key}",
             )
-            badge = self._badge_photo(
-                f"nav-{item.key}-inactive",
-                NAV_ITEM_GLYPHS[item.key],
-                COLORS["muted"],
-                size=28,
-                background=COLORS["sidebar"],
-                border=COLORS["sidebar"],
-            )
+            icon_image = render_nav_icon_image(PAGE_TAB_ICONS[item.key], COLORS["muted"], size=22)
+            badge = ImageTk.PhotoImage(icon_image, master=self.root)
+            self.badge_images[f"side-nav-{item.key}-inactive"] = badge
             icon = tk.Label(nav_shell, image=badge, bg=COLORS["sidebar"], bd=0)
             icon.image = badge
             icon.pack(expand=True)
@@ -1247,13 +1251,13 @@ class DesktopApp:
         tk.Label(sidebar, text="手动", bg=COLORS["sidebar"], fg=COLORS["muted_light"], font=("Microsoft YaHei UI", 9)).pack(side="bottom", pady=(0, 24))
 
         main = tk.Frame(shell, bg=COCKPIT_THEME["background_base"])
-        main.grid(row=0, column=1, sticky="nsew", padx=(8, 30), pady=22)
+        main.grid(row=0, column=1, sticky="nsew", padx=(8, 30), pady=(COCKPIT_STRUCTURE["main_top_padding"], 24))
         main.grid_columnconfigure(0, weight=1)
-        main.grid_rowconfigure(2, weight=1)
+        main.grid_rowconfigure(3, weight=1)
         self._install_cockpit_background(main, "main")
 
         header = tk.Frame(main, bg=COLORS["bg"])
-        header.grid(row=0, column=0, sticky="ew", pady=(0, 16))
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 28))
         header.grid_columnconfigure(0, weight=0)
         header.grid_columnconfigure(1, weight=1)
         header.grid_columnconfigure(2, weight=0)
@@ -1280,20 +1284,8 @@ class DesktopApp:
         tk.Frame(banner_inner, bg=COLORS["panel"]).pack(side="left", fill="x", expand=True)
         self._primary_button(banner_inner, "代理", self._start_proxy_test, variant="soft").pack(side="right")
 
-        toolbar = tk.Frame(header, bg=COLORS["bg"])
-        toolbar.grid(row=0, column=2, sticky="e")
-        for action in APP_TOOLBAR_ACTIONS:
-            button = self._primary_button(
-                toolbar,
-                action.label,
-                lambda key=action.key: self._run_toolbar_action(key),
-                variant=action.variant,
-            )
-            button.pack(side="left", padx=(8, 0))
-            self.toolbar_buttons[action.key] = button
-
         page_switcher = tk.Frame(main, bg=COLORS["bg"], width=628, height=58)
-        page_switcher.grid(row=1, column=0, pady=(0, 16))
+        page_switcher.grid(row=1, column=0, pady=(0, 22))
         page_switcher.grid_propagate(False)
         self._install_rounded_surface(
             page_switcher,
@@ -1315,8 +1307,10 @@ class DesktopApp:
             tab.pack(side="left", padx=(0, 8 if index < len(NAV_ITEMS) - 1 else 0))
             self.page_tab_buttons[item.key] = tab
 
+        self._build_cockpit_toolbar(main).grid(row=2, column=0, sticky="ew", pady=(0, 22))
+
         self.content_host = tk.Frame(main, bg=COLORS["bg"])
-        self.content_host.grid(row=2, column=0, sticky="nsew")
+        self.content_host.grid(row=3, column=0, sticky="nsew")
         self.content_host.grid_rowconfigure(0, weight=1)
         self.content_host.grid_columnconfigure(0, weight=1)
 
@@ -1325,6 +1319,49 @@ class DesktopApp:
         self._build_settings_page()
         self._build_logs_page()
         self._show_page("workbench")
+
+    def _build_cockpit_toolbar(self, parent: Any) -> Any:
+        tk = self.tk
+        toolbar = tk.Frame(parent, bg=parent.cget("bg") if hasattr(parent, "cget") else COLORS["bg"], height=COCKPIT_STRUCTURE["toolbar_height"])
+        toolbar.grid_propagate(False)
+        self._install_rounded_surface(
+            toolbar,
+            fill=COCKPIT_THEME["panel_fill"],
+            border=COCKPIT_THEME["panel_border"],
+            radius=16,
+            shadow=True,
+            cache_key="cockpit-toolbar",
+        )
+        inner = tk.Frame(toolbar, bg=COLORS["panel"])
+        inner.pack(fill="both", expand=True, padx=16, pady=12)
+
+        left = tk.Frame(inner, bg=COLORS["panel"])
+        left.pack(side="left", fill="x", expand=True)
+        for text, icon, accent in (
+            ("本地直连测速", "overview", COLORS["blue_dark"]),
+            ("GitHub 代理上传", "folder", COLORS["teal"]),
+            ("备份保护", "list", "#7c3aed"),
+        ):
+            item = tk.Frame(left, bg=COLORS["panel"])
+            item.pack(side="left", padx=(0, 22))
+            icon_image = render_nav_icon_image(icon, accent, size=18)
+            icon_photo = ImageTk.PhotoImage(icon_image, master=self.root)
+            self.badge_images[f"toolbar-{text}"] = icon_photo
+            tk.Label(item, image=icon_photo, bg=COLORS["panel"], bd=0).pack(side="left")
+            tk.Label(item, text=text, bg=COLORS["panel"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9, "bold")).pack(side="left", padx=(8, 0))
+
+        right = tk.Frame(inner, bg=COLORS["panel"])
+        right.pack(side="right")
+        for action in APP_TOOLBAR_ACTIONS:
+            button = self._primary_button(
+                right,
+                action.label,
+                lambda key=action.key: self._run_toolbar_action(key),
+                variant=action.variant,
+            )
+            button.pack(side="left", padx=(8, 0))
+            self.toolbar_buttons[action.key] = button
+        return toolbar
 
     def _card(self, parent: Any, title: str | None = None, subtitle: str | None = None, padding: int = 14) -> Any:
         frame = self.tk.Frame(
@@ -1583,6 +1620,19 @@ class DesktopApp:
         button.bind("<Button-1>", lambda _event, cb=command: cb())
         button.bind("<Enter>", lambda _event: animate_to(1.0), add="+")
         button.bind("<Leave>", lambda _event: animate_to(0.0), add="+")
+        return button
+
+    def _icon_button(
+        self,
+        parent: Any,
+        label: str,
+        command: Callable[[], None],
+        width: int = 88,
+        height: int = 36,
+        icon_kind: str | None = None,
+        variant: str = "secondary",
+    ) -> Any:
+        button = self._primary_button(parent, label, command, variant=variant)
         return button
 
     def _page_tab_button(self, parent: Any, item: NavItem, command: Callable[[], None], active: bool = False) -> Any:
@@ -2324,15 +2374,13 @@ class DesktopApp:
                 body.configure(bg=fill)
             icon = getattr(button, "_nav_icon", None)
             if icon is not None:
-                image = self._badge_photo(
-                    f"nav-{item.key}-{'active' if active else 'inactive'}",
-                    NAV_ITEM_GLYPHS[item.key],
+                icon_image = render_nav_icon_image(
+                    PAGE_TAB_ICONS[item.key],
                     "#ffffff" if active else COLORS["muted"],
-                    size=28,
-                    background=fill,
-                    border=fill,
-                    text_color="#ffffff" if active else COLORS["muted"],
+                    size=22,
                 )
+                image = ImageTk.PhotoImage(icon_image, master=self.root)
+                self.badge_images[f"side-nav-{item.key}-{'active' if active else 'inactive'}"] = image
                 icon.configure(image=image, bg=fill)
                 icon.image = image
             if active:
