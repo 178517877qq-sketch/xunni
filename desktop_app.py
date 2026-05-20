@@ -117,6 +117,8 @@ COCKPIT_LAYOUT = {
     "action_text_wrap": 148,
     "action_hint_wrap": 112,
     "compact_tool_height": 42,
+    "preflight_lines": 7,
+    "dashboard_log_lines": 7,
     "setting_row_height": 100,
     "setting_description_wrap": 600,
 }
@@ -139,8 +141,8 @@ COCKPIT_THEME = {
 }
 
 PAGE_TAB_STYLE = {
-    "width": 126,
-    "height": 42,
+    "width": 116,
+    "height": 40,
     "radius": 20,
     "active_fill": "#dbeafe",
     "active_border": "#bfdbfe",
@@ -169,11 +171,15 @@ COCKPIT_WORKBENCH_LAYOUT = {
 
 COCKPIT_STRUCTURE = {
     "window_height": 900,
-    "main_top_padding": 54,
-    "main_rows": ["header", "tabs", "toolbar", "content"],
-    "toolbar_height": 66,
+    "main_top_padding": 42,
+    "main_rows": ["header", "toolbar", "content"],
+    "toolbar_height": 56,
+    "page_switcher_width": 514,
+    "page_switcher_height": 52,
+    "page_tabs_in_header": True,
     "sidebar_rail_height": 548,
     "sidebar_has_action_button": True,
+    "sidebar_action_style": "icon",
     "background_layers": ["shell"],
 }
 
@@ -657,6 +663,26 @@ def render_nav_icon_image(kind: str, color: str, size: int = 18) -> Image.Image:
     elif kind == "folder":
         draw.line([(size * 0.16, size * 0.38), (size * 0.38, size * 0.38), (size * 0.46, size * 0.30), (size * 0.68, size * 0.30)], fill=color_rgb, width=w)
         draw.rounded_rectangle([size * 0.16, size * 0.38, size * 0.84, size * 0.74], radius=max(2, size // 7), outline=color_rgb, width=w)
+    elif kind == "refresh":
+        box = [size * 0.22, size * 0.22, size * 0.78, size * 0.78]
+        draw.arc(box, 35, 220, fill=color_rgb, width=w)
+        draw.arc(box, 215, 400, fill=color_rgb, width=w)
+        draw.polygon(
+            [
+                (size * 0.73, size * 0.20),
+                (size * 0.83, size * 0.36),
+                (size * 0.65, size * 0.37),
+            ],
+            fill=color_rgb,
+        )
+        draw.polygon(
+            [
+                (size * 0.27, size * 0.80),
+                (size * 0.17, size * 0.64),
+                (size * 0.35, size * 0.63),
+            ],
+            fill=color_rgb,
+        )
     else:
         draw.ellipse([size * 0.24, size * 0.24, size * 0.76, size * 0.76], outline=color_rgb, width=w)
     return image
@@ -1245,6 +1271,80 @@ class DesktopApp:
         style.configure("Title.TLabel", background=COLORS["bg"], foreground=COLORS["blue_dark"], font=("Microsoft YaHei UI", 20, "bold"))
         style.configure("CardTitle.TLabel", background=COLORS["card"], foreground=COLORS["text"], font=("Microsoft YaHei UI", 11, "bold"))
 
+    def _sidebar_icon_button(self, parent: Any, command: Callable[[], None]) -> Any:
+        size = 48
+        canvas_size = 58
+        parent_bg = parent.cget("bg") if hasattr(parent, "cget") else COLORS["bg"]
+        button = self.tk.Canvas(
+            parent,
+            width=canvas_size,
+            height=canvas_size,
+            bg=parent_bg,
+            bd=0,
+            highlightthickness=0,
+            cursor="hand2",
+        )
+        button._hover_progress = 0.0
+        button._hover_anim_job = None
+
+        def draw_button(progress: float = 0.0) -> None:
+            progress = max(0.0, min(1.0, progress))
+            fill = _blend_hex(COLORS["blue"], COLORS["blue_dark"], progress)
+            image = render_rounded_surface(
+                size,
+                size,
+                fill,
+                fill,
+                radius=18,
+                shadow=True,
+                shadow_alpha=34 + int(16 * progress),
+                shadow_offset=(0, 7 - int(2 * progress)),
+                shadow_blur=12,
+                shadow_margin=6,
+            )
+            photo_key = f"sidebar-refresh:{progress:.2f}"
+            photo = ImageTk.PhotoImage(image, master=self.root)
+            self.surface_images[photo_key] = photo
+            icon = render_nav_icon_image("refresh", "#ffffff", size=21)
+            icon_photo = ImageTk.PhotoImage(icon, master=self.root)
+            self.surface_images[f"sidebar-refresh-icon:{progress:.2f}"] = icon_photo
+            button.delete("all")
+            lift = int(round(progress * 2))
+            button.create_image(5, 5 - lift, image=photo, anchor="nw")
+            button.create_image(canvas_size // 2, canvas_size // 2 - lift, image=icon_photo, anchor="center")
+            button.image = photo
+            button.icon_image = icon_photo
+
+        def animate_to(target: float) -> None:
+            target = max(0.0, min(1.0, target))
+            if button._hover_anim_job is not None:
+                try:
+                    button.after_cancel(button._hover_anim_job)
+                except Exception:
+                    pass
+                button._hover_anim_job = None
+            start = float(getattr(button, "_hover_progress", 0.0))
+            start_time = time.monotonic()
+
+            def step() -> None:
+                elapsed = (time.monotonic() - start_time) * 1000
+                t = min(1.0, elapsed / 120)
+                current = start + (target - start) * _ease_out_cubic(t)
+                button._hover_progress = current
+                draw_button(current)
+                if t < 1.0:
+                    button._hover_anim_job = button.after(16, step)
+                else:
+                    button._hover_anim_job = None
+
+            step()
+
+        draw_button()
+        button.bind("<Button-1>", lambda _event, cb=command: cb())
+        button.bind("<Enter>", lambda _event: animate_to(1.0), add="+")
+        button.bind("<Leave>", lambda _event: animate_to(0.0), add="+")
+        return button
+
     def _build_ui(self) -> None:
         tk = self.tk
 
@@ -1258,8 +1358,8 @@ class DesktopApp:
         sidebar_host.grid(row=0, column=0, sticky="ns")
         sidebar_host.grid_propagate(False)
 
-        side_action = self._primary_button(sidebar_host, "刷新", self._refresh_dashboard, variant="primary")
-        side_action.pack(padx=(24, 10), pady=(126, 12))
+        side_action = self._sidebar_icon_button(sidebar_host, self._refresh_dashboard)
+        side_action.pack(padx=(24, 10), pady=(118, 10))
 
         sidebar = tk.Frame(sidebar_host, bg=COLORS["bg"], width=68, height=COCKPIT_STRUCTURE["sidebar_rail_height"], highlightthickness=0)
         sidebar.pack(padx=(24, 10))
@@ -1305,51 +1405,38 @@ class DesktopApp:
         main = tk.Frame(shell, bg=COCKPIT_THEME["background_base"])
         main.grid(row=0, column=1, sticky="nsew", padx=(8, 30), pady=(COCKPIT_STRUCTURE["main_top_padding"], 24))
         main.grid_columnconfigure(0, weight=1)
-        main.grid_rowconfigure(3, weight=1)
+        main.grid_rowconfigure(2, weight=1)
 
         header = tk.Frame(main, bg=COLORS["bg"])
-        header.grid(row=0, column=0, sticky="ew", pady=(0, 28))
-        header.grid_columnconfigure(0, weight=0)
-        header.grid_columnconfigure(1, weight=1)
-        header.grid_columnconfigure(2, weight=0)
-        title_stack = tk.Frame(header, bg=COLORS["bg"])
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 18))
+        header.grid_columnconfigure(0, weight=1, uniform="header-side")
+        header.grid_columnconfigure(1, weight=0)
+        header.grid_columnconfigure(2, weight=1, uniform="header-side")
+        title_stack = tk.Frame(header, bg=COLORS["bg"], width=350, height=58)
         title_stack.grid(row=0, column=0, sticky="w")
+        title_stack.grid_propagate(False)
         tk.Label(title_stack, textvariable=self.page_title_var, bg=COLORS["bg"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 19, "bold")).pack(anchor="w")
-        tk.Label(title_stack, textvariable=self.status_var, bg=COLORS["bg"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(anchor="w", pady=(5, 0))
+        tk.Label(title_stack, textvariable=self.status_var, bg=COLORS["bg"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9), width=55, anchor="w").pack(anchor="w", pady=(5, 0))
 
-        banner = tk.Frame(header, bg=COLORS["bg"], width=430, height=58, highlightthickness=0)
-        banner.grid(row=0, column=1, padx=(22, 16))
-        banner.grid_propagate(False)
-        self._install_rounded_surface(
-            banner,
-            fill=COCKPIT_THEME["panel_fill"],
-            border=COCKPIT_THEME["panel_border"],
-            radius=29,
-            shadow=True,
-            shadow_margin=8,
-            cache_key="top-banner",
+        page_switcher = tk.Frame(
+            header,
+            bg=COLORS["bg"],
+            width=COCKPIT_STRUCTURE["page_switcher_width"],
+            height=COCKPIT_STRUCTURE["page_switcher_height"],
         )
-        banner_inner = tk.Frame(banner, bg=COLORS["panel"])
-        banner_inner.pack(fill="both", expand=True, padx=14, pady=9)
-        tk.Label(banner_inner, text="提示", bg=COLORS["blue_soft"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 8, "bold"), padx=10, pady=5).pack(side="left")
-        tk.Label(banner_inner, textvariable=self.banner_text_var, bg=COLORS["panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold"), anchor="w").pack(side="left", padx=(12, 8))
-        tk.Frame(banner_inner, bg=COLORS["panel"]).pack(side="left", fill="x", expand=True)
-        self._primary_button(banner_inner, "代理", self._start_proxy_test, variant="soft").pack(side="right")
-
-        page_switcher = tk.Frame(main, bg=COLORS["bg"], width=628, height=58)
-        page_switcher.grid(row=1, column=0, pady=(0, 22))
+        page_switcher.grid(row=0, column=1, padx=(16, 16))
         page_switcher.grid_propagate(False)
         self._install_rounded_surface(
             page_switcher,
             fill=COCKPIT_THEME["panel_fill"],
             border=COCKPIT_THEME["panel_border"],
-            radius=29,
+            radius=26,
             shadow=True,
             shadow_margin=8,
             cache_key="page-switcher",
         )
         page_tabs_inner = tk.Frame(page_switcher, bg=COLORS["panel"])
-        page_tabs_inner.pack(fill="both", expand=True, padx=10, pady=8)
+        page_tabs_inner.pack(fill="both", expand=True, padx=9, pady=6)
         for index, item in enumerate(NAV_ITEMS):
             tab = self._page_tab_button(
                 page_tabs_inner,
@@ -1357,13 +1444,32 @@ class DesktopApp:
                 lambda key=item.key: self._show_page(key),
                 active=item.key == self.active_page,
             )
-            tab.pack(side="left", padx=(0, 8 if index < len(NAV_ITEMS) - 1 else 0))
+            tab.pack(side="left", padx=(0, 6 if index < len(NAV_ITEMS) - 1 else 0))
             self.page_tab_buttons[item.key] = tab
 
-        self._build_cockpit_toolbar(main).grid(row=2, column=0, sticky="ew", pady=(0, 22))
+        banner = tk.Frame(header, bg=COLORS["bg"], width=268, height=48, highlightthickness=0)
+        banner.grid(row=0, column=2, sticky="e")
+        banner.grid_propagate(False)
+        self._install_rounded_surface(
+            banner,
+            fill=COCKPIT_THEME["panel_fill"],
+            border=COCKPIT_THEME["panel_border"],
+            radius=24,
+            shadow=True,
+            shadow_margin=8,
+            cache_key="top-banner",
+        )
+        banner_inner = tk.Frame(banner, bg=COLORS["panel"])
+        banner_inner.pack(fill="both", expand=True, padx=8, pady=6)
+        tk.Label(banner_inner, text="提示", bg=COLORS["blue_soft"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 8, "bold"), padx=10, pady=5).pack(side="left")
+        tk.Label(banner_inner, textvariable=self.banner_text_var, bg=COLORS["panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 9, "bold"), anchor="w", width=13).pack(side="left", padx=(10, 6))
+        tk.Frame(banner_inner, bg=COLORS["panel"]).pack(side="left", fill="x", expand=True)
+        self._primary_button(banner_inner, "代理", self._start_proxy_test, variant="soft").pack(side="right")
+
+        self._build_cockpit_toolbar(main).grid(row=1, column=0, sticky="ew", pady=(0, 18))
 
         self.content_host = tk.Frame(main, bg=COLORS["bg"])
-        self.content_host.grid(row=3, column=0, sticky="nsew")
+        self.content_host.grid(row=2, column=0, sticky="nsew")
         self.content_host.grid_rowconfigure(0, weight=1)
         self.content_host.grid_columnconfigure(0, weight=1)
 
@@ -1381,13 +1487,13 @@ class DesktopApp:
             toolbar,
             fill=COCKPIT_THEME["panel_fill"],
             border=COCKPIT_THEME["panel_border"],
-            radius=16,
+            radius=22,
             shadow=True,
             shadow_margin=8,
             cache_key="cockpit-toolbar",
         )
         inner = tk.Frame(toolbar, bg=COLORS["panel"])
-        inner.pack(fill="both", expand=True, padx=16, pady=12)
+        inner.pack(fill="both", expand=True, padx=16, pady=10)
 
         left = tk.Frame(inner, bg=COLORS["panel"])
         left.pack(side="left", fill="x", expand=True)
@@ -2142,6 +2248,7 @@ class DesktopApp:
         right = self.tk.Frame(page, bg=COCKPIT_THEME["background_base"])
         right.grid(row=0, column=1, sticky="nsew")
         right.grid_columnconfigure(0, weight=1)
+        right.grid_rowconfigure(1, weight=1)
         right.grid_rowconfigure(2, weight=1)
 
         status_card = self._build_status_summary_card(right)
@@ -2149,14 +2256,14 @@ class DesktopApp:
 
         preflight_card = self._card(right, "运行前检查")
         preflight_card.grid(row=1, column=0, sticky="nsew", pady=(0, 14))
-        self.preflight_text = self.scrolledtext.ScrolledText(preflight_card, wrap="word", height=10, state="disabled", relief="flat", bg="#f8fbff")
+        self.preflight_text = self.scrolledtext.ScrolledText(preflight_card, wrap="word", height=COCKPIT_LAYOUT["preflight_lines"], state="disabled", relief="flat", bg="#f8fbff")
         self.preflight_text.pack(fill="both", expand=True, padx=18, pady=(8, 18))
 
         log_card = self._card(right, "运行日志")
         log_card.grid(row=2, column=0, sticky="nsew")
         log_card.grid_rowconfigure(1, weight=1)
         log_card.grid_columnconfigure(0, weight=1)
-        self.dashboard_log_text = self.scrolledtext.ScrolledText(log_card, wrap="word", height=8, state="disabled", relief="flat", bg="#f8fbff")
+        self.dashboard_log_text = self.scrolledtext.ScrolledText(log_card, wrap="word", height=COCKPIT_LAYOUT["dashboard_log_lines"], state="disabled", relief="flat", bg="#f8fbff")
         self.dashboard_log_text.pack(fill="both", expand=True, padx=18, pady=(8, 18))
 
     def _build_results_page(self) -> None:
@@ -2492,7 +2599,7 @@ class DesktopApp:
             self.messagebox.showerror("加载失败", f"无法读取配置文件：{exc}")
             return
         self._sync_config_to_form()
-        self.status_var.set(f"已加载配置 {path}")
+        self.status_var.set("配置已加载 · 手动工具模式")
         self._refresh_raw_from_form()
         self._refresh_dashboard()
 
@@ -2503,7 +2610,7 @@ class DesktopApp:
         except Exception as exc:
             self.messagebox.showerror("保存失败", f"无法保存配置文件：{exc}")
             return False
-        self.status_var.set(f"已保存配置 {self.config_path_var.get()}")
+        self.status_var.set("配置已保存 · 已刷新状态")
         self._refresh_dashboard()
         return True
 
