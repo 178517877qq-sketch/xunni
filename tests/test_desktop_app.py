@@ -1,8 +1,10 @@
 import json
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import Mock
 
 import desktop_app
 
@@ -128,6 +130,75 @@ class DesktopAppHelperTests(unittest.TestCase):
         self.assertTrue(report.has_warnings)
         self.assertIn("断开 VPN", report.text)
         self.assertIn("HTTPS_PROXY", report.text)
+
+
+    def test_sidebar_and_settings_sections_match_designed_workspace_layout(self):
+        self.assertEqual(
+            ["workbench", "results", "settings", "logs"],
+            [item.key for item in desktop_app.NAV_ITEMS],
+        )
+        self.assertEqual(["常用", "源池", "同步", "高级"], list(desktop_app.SETTINGS_FIELD_GROUPS))
+
+    def test_list_output_backups_filters_and_sorts_latest_first(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            config_path = root / "config.json"
+            backup_dir = root / "backups"
+            backup_dir.mkdir()
+            config = {"OUTPUT_FILE": "ip.txt", "OUTPUT_BACKUP_DIR": "backups"}
+
+            first = backup_dir / "ip.txt.20260101-000000.bak"
+            second = backup_dir / "ip.txt.20260102-000000.bak"
+            ignored = backup_dir / "other.txt.20260103-000000.bak"
+            first.write_text("first", encoding="utf-8")
+            second.write_text("second", encoding="utf-8")
+            ignored.write_text("ignored", encoding="utf-8")
+            os.utime(first, (1, 1))
+            os.utime(second, (2, 2))
+            os.utime(ignored, (3, 3))
+
+            backups = desktop_app.list_output_backups(config_path, config)
+
+        self.assertEqual([second, first], backups)
+
+    def test_restore_output_backup_backs_up_current_output_before_copying_selected_backup(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            config_path = root / "config.json"
+            output = root / "ip.txt"
+            backup_dir = root / "backups"
+            selected_backup = backup_dir / "ip.txt.20260102-000000.bak"
+            backup_dir.mkdir()
+            output.write_text("current\n", encoding="utf-8")
+            selected_backup.write_text("restored\n", encoding="utf-8")
+            backup_callback = Mock(return_value=backup_dir / "ip.txt.before-restore.bak")
+
+            restored_path = desktop_app.restore_output_backup(
+                selected_backup,
+                config_path,
+                {
+                    "OUTPUT_FILE": "ip.txt",
+                    "OUTPUT_BACKUP_DIR": "backups",
+                    "OUTPUT_BACKUP_KEEP": 20,
+                },
+                backup_callback=backup_callback,
+            )
+
+            restored = output.read_text(encoding="utf-8")
+
+        self.assertEqual(output, restored_path)
+        self.assertEqual("restored\n", restored)
+        backup_callback.assert_called_once_with(output, backup_dir, 20)
+
+    def test_calculate_port_share_counts_443_nodes(self):
+        self.assertEqual(
+            "67%",
+            desktop_app.calculate_port_share([
+                "1.1.1.1:443#US",
+                "1.1.1.2:2053#US",
+                "1.1.1.3:443#JP",
+            ]),
+        )
 
 
 if __name__ == "__main__":

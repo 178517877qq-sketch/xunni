@@ -7,9 +7,10 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping
+from typing import Any, Callable, Dict, Iterable, List, Mapping
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().with_name("config.json")
 MAIN_SCRIPT_PATH = Path(__file__).resolve().with_name("main.py")
@@ -24,45 +25,109 @@ class FieldSpec:
 
 
 @dataclass(frozen=True)
+class NavItem:
+    key: str
+    label: str
+    short_label: str
+
+
+@dataclass(frozen=True)
 class PreflightReport:
     text: str
     can_continue: bool
     has_warnings: bool
 
 
+NAV_ITEMS: List[NavItem] = [
+    NavItem("workbench", "工作台", "Run"),
+    NavItem("results", "结果", "IP"),
+    NavItem("settings", "设置", "Set"),
+    NavItem("logs", "日志/帮助", "Log"),
+]
+
+SETTINGS_FIELD_GROUPS: Dict[str, List[str]] = {
+    "常用": [
+        "USE_GLOBAL_MODE",
+        "GLOBAL_TOP_N",
+        "PER_COUNTRY_TOP_N",
+        "BANDWIDTH_CANDIDATES",
+        "OUTPUT_NODE_LIMIT",
+        "MIN_SUCCESS_RATE",
+        "TIMEOUT",
+        "TCP_PROBES",
+        "BANDWIDTH_SIZE_MB",
+        "TEST_AVAILABILITY",
+        "STABILITY_SCORING_ENABLED",
+        "FILTER_COUNTRIES_ENABLED",
+    ],
+    "源池": [
+        "ENABLE_CF_OFFICIAL_IP_SAMPLING",
+        "CF_OFFICIAL_SAMPLE_PER_24",
+        "CF_OFFICIAL_SAMPLE_PORTS",
+        "LOCAL_SEED_FILES",
+        "ALLOWED_COUNTRIES",
+        "FILTER_BLOCKED_COUNTRIES_ENABLED",
+        "BLOCKED_COUNTRIES",
+    ],
+    "同步": [
+        "OUTPUT_FILE",
+        "BACKUP_OUTPUT_ENABLED",
+        "OUTPUT_BACKUP_DIR",
+        "OUTPUT_BACKUP_KEEP",
+        "STABILITY_STATS_FILE",
+        "LOG_FILE",
+        "CF_ENABLED",
+        "DNS_UPDATE_TARGET_COUNT",
+        "ENABLE_WXPUSHER",
+        "GITHUB_SYNC_ENABLED",
+        "GITHUB_SYNC_PROXY_URL",
+        "GITHUB_SYNC_MAX_RETRIES",
+        "ENABLE_LOGGING",
+    ],
+    "高级": [
+        "MAX_WORKERS",
+        "AVAILABILITY_WORKERS",
+        "BANDWIDTH_WORKERS",
+        "AVAILABILITY_RETRY_MAX",
+        "BANDWIDTH_RETRY_MAX",
+        "CF_OFFICIAL_COUNTRY_CODE",
+        "CF_DNS_RECORD_NAME",
+    ],
+}
+
 FIELD_SPECS: List[FieldSpec] = [
-    FieldSpec("USE_GLOBAL_MODE", "全局模式", "bool", "基础"),
-    FieldSpec("GLOBAL_TOP_N", "全局 TopN", "int", "基础"),
-    FieldSpec("PER_COUNTRY_TOP_N", "分国家 TopN", "int", "基础"),
-    FieldSpec("BANDWIDTH_CANDIDATES", "带宽候选数", "int", "基础"),
-    FieldSpec("OUTPUT_NODE_LIMIT", "输出节点上限", "int", "基础"),
-    FieldSpec("MIN_SUCCESS_RATE", "TCP 最低成功率", "float", "基础"),
-    FieldSpec("TIMEOUT", "TCP 超时", "float", "基础"),
-    FieldSpec("TCP_PROBES", "TCP 探测次数", "int", "基础"),
-    FieldSpec("BANDWIDTH_SIZE_MB", "测速大小(MB)", "float", "基础"),
-    FieldSpec("TEST_AVAILABILITY", "启用可用性检测", "bool", "基础"),
-    FieldSpec("STABILITY_SCORING_ENABLED", "启用稳定性评分", "bool", "基础"),
-    FieldSpec("FILTER_COUNTRIES_ENABLED", "启用国家过滤", "bool", "基础"),
-    FieldSpec("ENABLE_CF_OFFICIAL_IP_SAMPLING", "启用官方 IP 采样", "bool", "源与筛选"),
-    FieldSpec("CF_OFFICIAL_SAMPLE_PER_24", "每个 /24 采样数", "int", "源与筛选"),
-    FieldSpec("CF_OFFICIAL_SAMPLE_PORTS", "官方采样端口", "csv_int", "源与筛选"),
-    FieldSpec("LOCAL_SEED_FILES", "本地种子文件", "csv_str", "源与筛选"),
-    FieldSpec("ALLOWED_COUNTRIES", "允许国家", "csv_str", "源与筛选"),
-    FieldSpec("FILTER_BLOCKED_COUNTRIES_ENABLED", "屏蔽国家过滤", "bool", "源与筛选"),
-    FieldSpec("BLOCKED_COUNTRIES", "屏蔽国家列表", "csv_str", "源与筛选"),
-    FieldSpec("OUTPUT_FILE", "输出文件", "str", "通知与同步"),
-    FieldSpec("BACKUP_OUTPUT_ENABLED", "启用输出备份", "bool", "通知与同步"),
-    FieldSpec("OUTPUT_BACKUP_DIR", "输出备份目录", "str", "通知与同步"),
-    FieldSpec("OUTPUT_BACKUP_KEEP", "备份保留份数", "int", "通知与同步"),
-    FieldSpec("STABILITY_STATS_FILE", "稳定性统计文件", "str", "通知与同步"),
-    FieldSpec("LOG_FILE", "日志文件", "str", "通知与同步"),
-    FieldSpec("CF_ENABLED", "启用 Cloudflare DNS", "bool", "通知与同步"),
-    FieldSpec("DNS_UPDATE_TARGET_COUNT", "DNS 更新数量", "int", "通知与同步"),
-    FieldSpec("ENABLE_WXPUSHER", "启用 WxPusher", "bool", "通知与同步"),
-    FieldSpec("GITHUB_SYNC_ENABLED", "自动同步 GitHub", "bool", "通知与同步"),
-    FieldSpec("GITHUB_SYNC_PROXY_URL", "GitHub 同步代理", "str", "通知与同步"),
-    FieldSpec("GITHUB_SYNC_MAX_RETRIES", "GitHub 重试次数", "int", "通知与同步"),
-    FieldSpec("ENABLE_LOGGING", "启用运行日志", "bool", "通知与同步"),
+    FieldSpec("USE_GLOBAL_MODE", "全局模式", "bool", "常用"),
+    FieldSpec("GLOBAL_TOP_N", "全局 TopN", "int", "常用"),
+    FieldSpec("PER_COUNTRY_TOP_N", "分国家 TopN", "int", "常用"),
+    FieldSpec("BANDWIDTH_CANDIDATES", "带宽候选数", "int", "常用"),
+    FieldSpec("OUTPUT_NODE_LIMIT", "输出节点上限", "int", "常用"),
+    FieldSpec("MIN_SUCCESS_RATE", "TCP 最低成功率", "float", "常用"),
+    FieldSpec("TIMEOUT", "TCP 超时", "float", "常用"),
+    FieldSpec("TCP_PROBES", "TCP 探测次数", "int", "常用"),
+    FieldSpec("BANDWIDTH_SIZE_MB", "测速大小 MB", "float", "常用"),
+    FieldSpec("TEST_AVAILABILITY", "启用可用性检测", "bool", "常用"),
+    FieldSpec("STABILITY_SCORING_ENABLED", "启用稳定性评分", "bool", "常用"),
+    FieldSpec("FILTER_COUNTRIES_ENABLED", "启用国家过滤", "bool", "常用"),
+    FieldSpec("ENABLE_CF_OFFICIAL_IP_SAMPLING", "启用官方 IP 采样", "bool", "源池"),
+    FieldSpec("CF_OFFICIAL_SAMPLE_PER_24", "每个 /24 采样数", "int", "源池"),
+    FieldSpec("CF_OFFICIAL_SAMPLE_PORTS", "官方采样端口", "csv_int", "源池"),
+    FieldSpec("LOCAL_SEED_FILES", "本地种子文件", "csv_str", "源池"),
+    FieldSpec("ALLOWED_COUNTRIES", "允许国家", "csv_str", "源池"),
+    FieldSpec("FILTER_BLOCKED_COUNTRIES_ENABLED", "屏蔽国家过滤", "bool", "源池"),
+    FieldSpec("BLOCKED_COUNTRIES", "屏蔽国家列表", "csv_str", "源池"),
+    FieldSpec("OUTPUT_FILE", "输出文件", "str", "同步"),
+    FieldSpec("BACKUP_OUTPUT_ENABLED", "启用输出备份", "bool", "同步"),
+    FieldSpec("OUTPUT_BACKUP_DIR", "输出备份目录", "str", "同步"),
+    FieldSpec("OUTPUT_BACKUP_KEEP", "备份保留份数", "int", "同步"),
+    FieldSpec("STABILITY_STATS_FILE", "稳定性统计文件", "str", "同步"),
+    FieldSpec("LOG_FILE", "日志文件", "str", "同步"),
+    FieldSpec("CF_ENABLED", "启用 Cloudflare DNS", "bool", "同步"),
+    FieldSpec("DNS_UPDATE_TARGET_COUNT", "DNS 更新数量", "int", "同步"),
+    FieldSpec("ENABLE_WXPUSHER", "启用 WxPusher", "bool", "同步"),
+    FieldSpec("GITHUB_SYNC_ENABLED", "自动同步 GitHub", "bool", "同步"),
+    FieldSpec("GITHUB_SYNC_PROXY_URL", "GitHub 同步代理", "str", "同步"),
+    FieldSpec("GITHUB_SYNC_MAX_RETRIES", "GitHub 重试次数", "int", "同步"),
+    FieldSpec("ENABLE_LOGGING", "启用运行日志", "bool", "同步"),
     FieldSpec("MAX_WORKERS", "TCP 并发线程", "int", "高级"),
     FieldSpec("AVAILABILITY_WORKERS", "可用性线程", "int", "高级"),
     FieldSpec("BANDWIDTH_WORKERS", "带宽线程", "int", "高级"),
@@ -71,6 +136,23 @@ FIELD_SPECS: List[FieldSpec] = [
     FieldSpec("CF_OFFICIAL_COUNTRY_CODE", "官方采样国家码", "str", "高级"),
     FieldSpec("CF_DNS_RECORD_NAME", "Cloudflare 记录名", "str", "高级"),
 ]
+
+FIELD_SPEC_BY_NAME = {spec.name: spec for spec in FIELD_SPECS}
+
+COLORS = {
+    "bg": "#eef4fb",
+    "panel": "#f7fbff",
+    "card": "#ffffff",
+    "border": "#d5dfec",
+    "text": "#0f172a",
+    "muted": "#64748b",
+    "blue": "#2563eb",
+    "blue_dark": "#1d4ed8",
+    "blue_soft": "#dbeafe",
+    "green": "#16a34a",
+    "red": "#dc2626",
+    "input": "#eef2f7",
+}
 
 
 def load_config_file(path: Path | str) -> Dict[str, Any]:
@@ -132,6 +214,101 @@ def _resolve_config_relative(config_path: Path, value: str) -> Path:
     return config_path.expanduser().parent / path
 
 
+def resolve_output_path(config_path: Path | str, config: Mapping[str, Any]) -> Path:
+    return _resolve_config_relative(Path(config_path), str(config.get("OUTPUT_FILE", "ip.txt")))
+
+
+def resolve_backup_dir(config_path: Path | str, config: Mapping[str, Any]) -> Path:
+    return _resolve_config_relative(Path(config_path), str(config.get("OUTPUT_BACKUP_DIR", "backups")))
+
+
+def read_output_lines(config_path: Path | str, config: Mapping[str, Any]) -> List[str]:
+    output_path = resolve_output_path(config_path, config)
+    if not output_path.exists():
+        return []
+    return [line.strip() for line in output_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def calculate_port_share(lines: Iterable[str], port: int | str = 443) -> str:
+    items = [line.strip() for line in lines if line.strip()]
+    if not items:
+        return "0%"
+    target = str(port)
+    matched = 0
+    for item in items:
+        endpoint = item.split("#", 1)[0]
+        if endpoint.rsplit(":", 1)[-1] == target:
+            matched += 1
+    return f"{round((matched / len(items)) * 100):.0f}%"
+
+
+def list_output_backups(config_path: Path | str, config: Mapping[str, Any]) -> List[Path]:
+    output_path = resolve_output_path(config_path, config)
+    backup_dir = resolve_backup_dir(config_path, config)
+    if not backup_dir.exists():
+        return []
+    pattern = f"{output_path.name}.*.bak"
+    return sorted(
+        backup_dir.glob(pattern),
+        key=lambda path: (path.stat().st_mtime, path.name),
+        reverse=True,
+    )
+
+
+def _prune_backups(backup_dir: Path, output_path: Path, keep: int) -> None:
+    if keep <= 0 or not backup_dir.exists():
+        return
+    backups = sorted(
+        backup_dir.glob(f"{output_path.name}.*.bak"),
+        key=lambda path: (path.stat().st_mtime, path.name),
+        reverse=True,
+    )
+    for stale_path in backups[keep:]:
+        try:
+            stale_path.unlink()
+        except OSError:
+            pass
+
+
+def backup_current_output_file(output_path: Path, backup_dir: Path, keep: int) -> Path | None:
+    if not output_path.exists():
+        return None
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    backup_path = backup_dir / f"{output_path.name}.{timestamp}.bak"
+    counter = 1
+    while backup_path.exists():
+        backup_path = backup_dir / f"{output_path.name}.{timestamp}-{counter}.bak"
+        counter += 1
+    shutil.copy2(output_path, backup_path)
+    _prune_backups(backup_dir, output_path, keep)
+    return backup_path
+
+
+def restore_output_backup(
+    backup_path: Path | str,
+    config_path: Path | str,
+    config: Mapping[str, Any],
+    backup_callback: Callable[[Path, Path, int], Path | None] = backup_current_output_file,
+) -> Path:
+    selected_backup = Path(backup_path)
+    if not selected_backup.exists():
+        raise FileNotFoundError(selected_backup)
+    output_path = resolve_output_path(config_path, config)
+    backup_dir = resolve_backup_dir(config_path, config)
+    keep = int(config.get("OUTPUT_BACKUP_KEEP", 20) or 20)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    backup_callback(output_path, backup_dir, keep)
+    shutil.copy2(selected_backup, output_path)
+    return output_path
+
+
+def format_backup_label(path: Path) -> str:
+    size = path.stat().st_size
+    stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(path.stat().st_mtime))
+    return f"{stamp}  {path.name}  {size} B"
+
+
 def build_preflight_report(
     config_path: Path,
     config: Mapping[str, Any],
@@ -156,7 +333,7 @@ def build_preflight_report(
     else:
         errors.append(f"Python 不可用: {python_exe}")
 
-    output_file = _resolve_config_relative(config_path, str(config.get("OUTPUT_FILE", "ip.txt")))
+    output_file = resolve_output_path(config_path, config)
     if output_file.parent.exists():
         ok.append(f"输出目录存在: {output_file.parent}")
     else:
@@ -185,7 +362,7 @@ def build_preflight_report(
     if proxy_env_keys:
         warnings.append("检测到环境代理变量，优选前请确认它不会影响测速: " + ", ".join(sorted(proxy_env_keys)))
 
-    lines = [f"运行模式: {mode_label}", "", "检查结果:"]
+    lines = [f"运行模式: {mode_label}", "", "检查结果"]
     lines.extend(f"[OK] {item}" for item in ok)
     lines.extend(f"[WARN] {item}" for item in warnings)
     lines.extend(f"[ERROR] {item}" for item in errors)
@@ -321,7 +498,12 @@ class ProcessRunner:
         command = build_run_command(python_exe, str(MAIN_SCRIPT_PATH))
         self.start_command(command, cwd=MAIN_SCRIPT_PATH.parent)
 
-    def start_command(self, command: List[str], cwd: Path | str | None = None, env_overrides: Mapping[str, str] | None = None) -> None:
+    def start_command(
+        self,
+        command: List[str],
+        cwd: Path | str | None = None,
+        env_overrides: Mapping[str, str] | None = None,
+    ) -> None:
         if self.running():
             raise RuntimeError("process already running")
 
@@ -381,113 +563,378 @@ class DesktopApp:
         self.root = tk.Tk()
         self.root.title("cfnb 手动优选工具")
         self.root.geometry("1280x860")
-        self.root.minsize(1100, 760)
+        self.root.minsize(1120, 740)
+        self.root.configure(bg=COLORS["bg"])
 
         self.runner = ProcessRunner()
         self.config_path_var = tk.StringVar(value=str(DEFAULT_CONFIG_PATH))
         self.status_var = tk.StringVar(value="准备就绪")
+        self.page_title_var = tk.StringVar(value="工作台")
         self.python_var = tk.StringVar(value=sys.executable)
-        self.config_data: Dict[str, Any] = {}
-        self.form_vars: Dict[str, Any] = {}
-        self.raw_text = None
-        self.log_text = None
-        self.result_list = None
-        self.result_count_var = tk.StringVar(value="结果: 0")
+        self.result_count_var = tk.StringVar(value="0")
+        self.port_share_var = tk.StringVar(value="0%")
+        self.output_updated_var = tk.StringVar(value="未生成")
+        self.github_status_var = tk.StringVar(value="未检查")
+        self.vpn_status_var = tk.StringVar(value="请断开 VPN 后优选")
+        self.backup_count_var = tk.StringVar(value="0")
         self.output_file_var = tk.StringVar(value="")
 
+        self.config_data: Dict[str, Any] = {}
+        self.form_vars: Dict[str, Any] = {}
+        self.page_frames: Dict[str, Any] = {}
+        self.nav_buttons: Dict[str, Any] = {}
+        self.settings_frames: Dict[str, Any] = {}
+        self.settings_buttons: Dict[str, Any] = {}
+        self.active_page = "workbench"
+        self.active_settings_group = "常用"
+        self.backup_paths: List[Path] = []
+        self.log_lines: List[str] = []
+
+        self.raw_text = None
+        self.log_text = None
+        self.dashboard_log_text = None
+        self.result_list = None
+        self.result_preview_list = None
+        self.backup_list = None
+        self.preflight_text = None
+
+        self._configure_styles()
         self._build_ui()
         self._load_from_disk()
         self._poll_runner_queue()
 
+    def _configure_styles(self) -> None:
+        style = self.ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except self.tk.TclError:
+            pass
+        style.configure("App.TFrame", background=COLORS["bg"])
+        style.configure("Card.TFrame", background=COLORS["card"])
+        style.configure("Panel.TFrame", background=COLORS["panel"])
+        style.configure("Muted.TLabel", background=COLORS["card"], foreground=COLORS["muted"])
+        style.configure("Title.TLabel", background=COLORS["bg"], foreground=COLORS["blue_dark"], font=("Microsoft YaHei UI", 20, "bold"))
+        style.configure("CardTitle.TLabel", background=COLORS["card"], foreground=COLORS["text"], font=("Microsoft YaHei UI", 11, "bold"))
+
     def _build_ui(self) -> None:
-        ttk = self.ttk
         tk = self.tk
 
-        top = ttk.Frame(self.root, padding=12)
-        top.pack(fill="x")
+        shell = tk.Frame(self.root, bg=COLORS["bg"])
+        shell.pack(fill="both", expand=True)
+        shell.grid_columnconfigure(1, weight=1)
+        shell.grid_rowconfigure(0, weight=1)
 
-        ttk.Label(top, text="配置文件").grid(row=0, column=0, sticky="w")
-        config_entry = ttk.Entry(top, textvariable=self.config_path_var, width=70)
-        config_entry.grid(row=0, column=1, sticky="ew", padx=(8, 8))
-        ttk.Button(top, text="浏览", command=self._browse_config).grid(row=0, column=2, padx=(0, 8))
-        ttk.Button(top, text="加载", command=self._load_from_disk).grid(row=0, column=3, padx=(0, 8))
-        ttk.Button(top, text="保存", command=self._save_to_disk).grid(row=0, column=4, padx=(0, 8))
-        ttk.Label(top, text="Python").grid(row=1, column=0, sticky="w", pady=(8, 0))
-        ttk.Entry(top, textvariable=self.python_var, width=70).grid(row=1, column=1, sticky="ew", padx=(8, 8), pady=(8, 0))
-        ttk.Label(top, textvariable=self.status_var).grid(row=1, column=2, columnspan=3, sticky="w", pady=(8, 0))
-        top.columnconfigure(1, weight=1)
+        sidebar = tk.Frame(shell, bg="#f8fbff", width=92, highlightbackground=COLORS["border"], highlightthickness=1)
+        sidebar.grid(row=0, column=0, sticky="ns")
+        sidebar.grid_propagate(False)
 
-        body = ttk.Panedwindow(self.root, orient="horizontal")
-        body.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        tk.Label(sidebar, text="cfnb", bg="#f8fbff", fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 14, "bold")).pack(pady=(24, 22))
+        for item in NAV_ITEMS:
+            button = tk.Button(
+                sidebar,
+                text=item.short_label,
+                command=lambda key=item.key: self._show_page(key),
+                relief="flat",
+                bd=0,
+                width=7,
+                height=2,
+                font=("Segoe UI", 9, "bold"),
+                cursor="hand2",
+            )
+            button.pack(padx=14, pady=7)
+            self.nav_buttons[item.key] = button
 
-        form_host = ttk.Frame(body)
-        side_host = ttk.Frame(body)
-        body.add(form_host, weight=3)
-        body.add(side_host, weight=2)
+        tk.Label(sidebar, text="手动", bg="#f8fbff", fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(side="bottom", pady=(0, 18))
 
-        form_notebook = ttk.Notebook(form_host)
-        form_notebook.pack(fill="both", expand=True)
+        main = tk.Frame(shell, bg=COLORS["bg"])
+        main.grid(row=0, column=1, sticky="nsew", padx=26, pady=22)
+        main.grid_columnconfigure(0, weight=1)
+        main.grid_rowconfigure(1, weight=1)
 
-        for section in ("基础", "源与筛选", "通知与同步", "高级"):
-            frame = ttk.Frame(form_notebook, padding=10)
-            form_notebook.add(frame, text=section)
-            self._build_field_section(frame, section)
+        header = tk.Frame(main, bg=COLORS["bg"])
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 18))
+        header.grid_columnconfigure(1, weight=1)
+        tk.Label(header, textvariable=self.page_title_var, bg=COLORS["bg"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 22, "bold")).grid(row=0, column=0, sticky="w")
+        tk.Label(header, textvariable=self.status_var, bg=COLORS["bg"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 10)).grid(row=0, column=1, sticky="e")
 
-        raw_frame = ttk.Frame(form_notebook, padding=10)
-        form_notebook.add(raw_frame, text="完整配置")
-        self.raw_text = self.scrolledtext.ScrolledText(raw_frame, wrap="none", height=20, undo=True)
-        self.raw_text.pack(fill="both", expand=True)
+        self.content_host = tk.Frame(main, bg=COLORS["bg"])
+        self.content_host.grid(row=1, column=0, sticky="nsew")
+        self.content_host.grid_rowconfigure(0, weight=1)
+        self.content_host.grid_columnconfigure(0, weight=1)
 
-        raw_buttons = ttk.Frame(raw_frame)
-        raw_buttons.pack(fill="x", pady=(10, 0))
-        ttk.Button(raw_buttons, text="应用原始 JSON", command=self._apply_raw_to_form).pack(side="left")
-        ttk.Button(raw_buttons, text="从表单刷新原始 JSON", command=self._refresh_raw_from_form).pack(side="left", padx=(8, 0))
+        self._build_workbench_page()
+        self._build_results_page()
+        self._build_settings_page()
+        self._build_logs_page()
+        self._show_page("workbench")
 
-        side_notebook = ttk.Notebook(side_host)
-        side_notebook.pack(fill="both", expand=True)
+    def _card(self, parent: Any, title: str | None = None, padding: int = 14) -> Any:
+        frame = self.tk.Frame(
+            parent,
+            bg=COLORS["card"],
+            highlightbackground=COLORS["border"],
+            highlightthickness=1,
+            bd=0,
+        )
+        if title:
+            self.tk.Label(frame, text=title, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 11, "bold")).pack(anchor="w", padx=padding, pady=(padding, 4))
+        return frame
 
-        log_frame = ttk.Frame(side_notebook, padding=10)
-        side_notebook.add(log_frame, text="日志")
-        self.log_text = self.scrolledtext.ScrolledText(log_frame, wrap="word", height=20, state="disabled")
-        self.log_text.pack(fill="both", expand=True)
+    def _metric_card(self, parent: Any, title: str, variable: Any, accent: str = COLORS["text"]) -> Any:
+        frame = self._card(parent)
+        self.tk.Label(frame, text=title, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).pack(anchor="w", padx=14, pady=(12, 2))
+        self.tk.Label(frame, textvariable=variable, bg=COLORS["card"], fg=accent, font=("Segoe UI", 24, "bold")).pack(anchor="w", padx=14, pady=(0, 12))
+        return frame
 
-        result_frame = ttk.Frame(side_notebook, padding=10)
-        side_notebook.add(result_frame, text="结果")
-        ttk.Label(result_frame, textvariable=self.result_count_var).pack(anchor="w")
-        self.result_list = tk.Listbox(result_frame, height=18)
-        self.result_list.pack(fill="both", expand=True, pady=(8, 8))
+    def _primary_button(self, parent: Any, text: str, command: Callable[[], None], primary: bool = False) -> Any:
+        return self.tk.Button(
+            parent,
+            text=text,
+            command=command,
+            bg=COLORS["blue"] if primary else COLORS["card"],
+            fg="#ffffff" if primary else COLORS["text"],
+            activebackground=COLORS["blue_dark"] if primary else COLORS["blue_soft"],
+            activeforeground="#ffffff" if primary else COLORS["text"],
+            relief="flat",
+            bd=0,
+            highlightbackground=COLORS["border"],
+            highlightthickness=1,
+            padx=14,
+            pady=10,
+            font=("Microsoft YaHei UI", 10, "bold"),
+            cursor="hand2",
+        )
 
-        result_buttons = ttk.Frame(result_frame)
-        result_buttons.pack(fill="x")
-        ttk.Button(result_buttons, text="刷新结果", command=self._refresh_results).pack(side="left")
-        ttk.Button(result_buttons, text="打开输出目录", command=self._open_output_folder).pack(side="left", padx=(8, 0))
+    def _build_workbench_page(self) -> None:
+        page = self.tk.Frame(self.content_host, bg=COLORS["bg"])
+        page.grid(row=0, column=0, sticky="nsew")
+        page.grid_columnconfigure(0, weight=3)
+        page.grid_columnconfigure(1, weight=2)
+        page.grid_rowconfigure(1, weight=1)
+        self.page_frames["workbench"] = page
 
-        footer = ttk.Frame(self.root, padding=(12, 0, 12, 12))
-        footer.pack(fill="x")
-        ttk.Button(footer, text="只运行优选", command=lambda: self._start_optimize(sync_after=False)).pack(side="left")
-        ttk.Button(footer, text="优选后按设置自动上传", command=lambda: self._start_optimize(sync_after=True)).pack(side="left", padx=(8, 0))
-        ttk.Button(footer, text="上传到 GitHub", command=self._start_sync_only).pack(side="left", padx=(8, 0))
-        ttk.Button(footer, text="测试 GitHub 代理", command=self._start_proxy_test).pack(side="left", padx=(8, 0))
-        ttk.Button(footer, text="停止", command=self.runner.stop).pack(side="left", padx=(8, 0))
-        ttk.Button(footer, text="同步表单到配置", command=self._sync_form_to_config).pack(side="left", padx=(8, 0))
+        metrics = self.tk.Frame(page, bg=COLORS["bg"])
+        metrics.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 16))
+        for col in range(3):
+            metrics.grid_columnconfigure(col, weight=1, uniform="metrics")
+        self._metric_card(metrics, "VPN/代理提醒", self.vpn_status_var, COLORS["red"]).grid(row=0, column=0, sticky="ew", padx=(0, 12))
+        self._metric_card(metrics, "当前 ip.txt 节点", self.result_count_var).grid(row=0, column=1, sticky="ew", padx=6)
+        self._metric_card(metrics, "GitHub 同步代理", self.github_status_var, COLORS["green"]).grid(row=0, column=2, sticky="ew", padx=(12, 0))
 
-    def _build_field_section(self, parent: Any, section: str) -> None:
-        ttk = self.ttk
-        fields = [spec for spec in FIELD_SPECS if spec.section == section]
-        for index, spec in enumerate(fields):
+        left = self.tk.Frame(page, bg=COLORS["bg"])
+        left.grid(row=1, column=0, sticky="nsew", padx=(0, 14))
+        left.grid_rowconfigure(2, weight=1)
+        left.grid_columnconfigure(0, weight=1)
+
+        action_card = self._card(left, "手动操作")
+        action_card.grid(row=0, column=0, sticky="ew", pady=(0, 14))
+        actions = self.tk.Frame(action_card, bg=COLORS["card"])
+        actions.pack(fill="x", padx=14, pady=(8, 14))
+        for col in range(4):
+            actions.grid_columnconfigure(col, weight=1, uniform="actions")
+        self._primary_button(actions, "只运行优选", lambda: self._start_optimize(sync_after=False), primary=True).grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        self._primary_button(actions, "优选后自动上传", lambda: self._start_optimize(sync_after=True)).grid(row=0, column=1, sticky="ew", padx=4)
+        self._primary_button(actions, "上传到 GitHub", self._start_sync_only).grid(row=0, column=2, sticky="ew", padx=4)
+        self._primary_button(actions, "测试 GitHub 代理", self._start_proxy_test).grid(row=0, column=3, sticky="ew", padx=(8, 0))
+        self._primary_button(actions, "停止当前任务", self.runner.stop).grid(row=1, column=0, sticky="ew", pady=(10, 0), padx=(0, 8))
+        self._primary_button(actions, "保存配置", self._save_to_disk).grid(row=1, column=1, sticky="ew", pady=(10, 0), padx=4)
+        self._primary_button(actions, "刷新检查", self._refresh_dashboard).grid(row=1, column=2, sticky="ew", pady=(10, 0), padx=4)
+        self._primary_button(actions, "打开输出目录", self._open_output_folder).grid(row=1, column=3, sticky="ew", pady=(10, 0), padx=(8, 0))
+
+        preview_card = self._card(left, "最新结果预览")
+        preview_card.grid(row=1, column=0, sticky="ew", pady=(0, 14))
+        preview_meta = self.tk.Frame(preview_card, bg=COLORS["card"])
+        preview_meta.pack(fill="x", padx=14, pady=(4, 10))
+        self.tk.Label(preview_meta, text="443 占比", bg=COLORS["card"], fg=COLORS["muted"]).pack(side="left")
+        self.tk.Label(preview_meta, textvariable=self.port_share_var, bg=COLORS["card"], fg=COLORS["blue_dark"], font=("Segoe UI", 12, "bold")).pack(side="left", padx=(8, 20))
+        self.tk.Label(preview_meta, text="更新时间", bg=COLORS["card"], fg=COLORS["muted"]).pack(side="left")
+        self.tk.Label(preview_meta, textvariable=self.output_updated_var, bg=COLORS["card"], fg=COLORS["text"]).pack(side="left", padx=(8, 0))
+        self.result_preview_list = self.tk.Listbox(preview_card, height=8, relief="flat", bd=0, bg="#f8fbff", fg=COLORS["text"], font=("Consolas", 10))
+        self.result_preview_list.pack(fill="x", padx=14, pady=(0, 14))
+
+        log_card = self._card(left, "运行日志")
+        log_card.grid(row=2, column=0, sticky="nsew")
+        log_card.grid_rowconfigure(1, weight=1)
+        log_card.grid_columnconfigure(0, weight=1)
+        self.dashboard_log_text = self.scrolledtext.ScrolledText(log_card, wrap="word", height=8, state="disabled", relief="flat", bg="#f8fbff")
+        self.dashboard_log_text.pack(fill="both", expand=True, padx=14, pady=(8, 14))
+
+        right = self._card(page, "运行前检查")
+        right.grid(row=1, column=1, sticky="nsew")
+        self.preflight_text = self.scrolledtext.ScrolledText(right, wrap="word", height=18, state="disabled", relief="flat", bg="#f8fbff")
+        self.preflight_text.pack(fill="both", expand=True, padx=14, pady=(8, 14))
+
+    def _build_results_page(self) -> None:
+        page = self.tk.Frame(self.content_host, bg=COLORS["bg"])
+        page.grid(row=0, column=0, sticky="nsew")
+        page.grid_columnconfigure(0, weight=3)
+        page.grid_columnconfigure(1, weight=2)
+        page.grid_rowconfigure(1, weight=1)
+        self.page_frames["results"] = page
+
+        summary = self.tk.Frame(page, bg=COLORS["bg"])
+        summary.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 16))
+        for col in range(3):
+            summary.grid_columnconfigure(col, weight=1, uniform="result-metrics")
+        self._metric_card(summary, "节点总数", self.result_count_var).grid(row=0, column=0, sticky="ew", padx=(0, 12))
+        self._metric_card(summary, "443 占比", self.port_share_var, COLORS["blue_dark"]).grid(row=0, column=1, sticky="ew", padx=6)
+        self._metric_card(summary, "备份数量", self.backup_count_var).grid(row=0, column=2, sticky="ew", padx=(12, 0))
+
+        result_card = self._card(page, "ip.txt")
+        result_card.grid(row=1, column=0, sticky="nsew", padx=(0, 14))
+        self.result_list = self.tk.Listbox(result_card, relief="flat", bd=0, bg="#f8fbff", fg=COLORS["text"], font=("Consolas", 10))
+        self.result_list.pack(fill="both", expand=True, padx=14, pady=(8, 12))
+        result_buttons = self.tk.Frame(result_card, bg=COLORS["card"])
+        result_buttons.pack(fill="x", padx=14, pady=(0, 14))
+        self._primary_button(result_buttons, "刷新结果", self._refresh_results, primary=True).pack(side="left")
+        self._primary_button(result_buttons, "打开输出目录", self._open_output_folder).pack(side="left", padx=(10, 0))
+
+        backup_card = self._card(page, "历史备份")
+        backup_card.grid(row=1, column=1, sticky="nsew")
+        self.backup_list = self.tk.Listbox(backup_card, relief="flat", bd=0, bg="#f8fbff", fg=COLORS["text"], font=("Microsoft YaHei UI", 9))
+        self.backup_list.pack(fill="both", expand=True, padx=14, pady=(8, 12))
+        backup_buttons = self.tk.Frame(backup_card, bg=COLORS["card"])
+        backup_buttons.pack(fill="x", padx=14, pady=(0, 14))
+        self._primary_button(backup_buttons, "恢复选中备份", self._restore_selected_backup, primary=True).pack(side="left")
+        self._primary_button(backup_buttons, "刷新备份", self._refresh_backups).pack(side="left", padx=(10, 0))
+
+    def _build_settings_page(self) -> None:
+        page = self.tk.Frame(self.content_host, bg=COLORS["bg"])
+        page.grid(row=0, column=0, sticky="nsew")
+        page.grid_columnconfigure(0, weight=1)
+        page.grid_rowconfigure(1, weight=1)
+        self.page_frames["settings"] = page
+
+        top = self._card(page, "配置文件")
+        top.grid(row=0, column=0, sticky="ew", pady=(0, 16))
+        top_inner = self.tk.Frame(top, bg=COLORS["card"])
+        top_inner.pack(fill="x", padx=14, pady=(8, 14))
+        top_inner.grid_columnconfigure(1, weight=1)
+        self.tk.Label(top_inner, text="路径", bg=COLORS["card"], fg=COLORS["muted"]).grid(row=0, column=0, sticky="w")
+        self.tk.Entry(top_inner, textvariable=self.config_path_var, relief="flat", bg=COLORS["input"]).grid(row=0, column=1, sticky="ew", padx=10, ipady=6)
+        self._primary_button(top_inner, "浏览", self._browse_config).grid(row=0, column=2, padx=(0, 8))
+        self._primary_button(top_inner, "加载", self._load_from_disk).grid(row=0, column=3, padx=(0, 8))
+        self._primary_button(top_inner, "保存", self._save_to_disk, primary=True).grid(row=0, column=4)
+        self.tk.Label(top_inner, text="Python", bg=COLORS["card"], fg=COLORS["muted"]).grid(row=1, column=0, sticky="w", pady=(10, 0))
+        self.tk.Entry(top_inner, textvariable=self.python_var, relief="flat", bg=COLORS["input"]).grid(row=1, column=1, columnspan=4, sticky="ew", padx=(10, 0), pady=(10, 0), ipady=6)
+
+        body = self._card(page)
+        body.grid(row=1, column=0, sticky="nsew")
+        body.grid_columnconfigure(0, weight=1)
+        body.grid_rowconfigure(1, weight=1)
+        tabs = self.tk.Frame(body, bg=COLORS["card"])
+        tabs.grid(row=0, column=0, sticky="ew", padx=14, pady=(14, 8))
+        for group in SETTINGS_FIELD_GROUPS:
+            button = self._primary_button(tabs, group, lambda name=group: self._show_settings_group(name))
+            button.pack(side="left", padx=(0, 8))
+            self.settings_buttons[group] = button
+
+        settings_host = self.tk.Frame(body, bg=COLORS["card"])
+        settings_host.grid(row=1, column=0, sticky="nsew", padx=14, pady=(0, 14))
+        settings_host.grid_rowconfigure(0, weight=1)
+        settings_host.grid_columnconfigure(0, weight=1)
+        for group, field_names in SETTINGS_FIELD_GROUPS.items():
+            frame = self.tk.Frame(settings_host, bg=COLORS["card"])
+            frame.grid(row=0, column=0, sticky="nsew")
+            self.settings_frames[group] = frame
+            if group == "高级":
+                self._build_advanced_settings_group(frame, field_names)
+            else:
+                self._build_field_group(frame, field_names)
+        self._show_settings_group("常用")
+
+    def _build_field_group(self, parent: Any, field_names: List[str]) -> None:
+        for col in range(4):
+            parent.grid_columnconfigure(col, weight=1 if col % 2 == 1 else 0)
+        for index, name in enumerate(field_names):
+            spec = FIELD_SPEC_BY_NAME[name]
             row = index // 2
             col = (index % 2) * 2
-            ttk.Label(parent, text=spec.label).grid(row=row, column=col, sticky="w", padx=(0, 8), pady=(0, 8))
+            self.tk.Label(parent, text=spec.label, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).grid(row=row, column=col, sticky="w", padx=(0, 8), pady=(0, 10))
             if spec.kind == "bool":
                 var = self.tk.BooleanVar(value=False)
-                widget = ttk.Checkbutton(parent, variable=var)
+                widget = self.tk.Checkbutton(parent, variable=var, bg=COLORS["card"], activebackground=COLORS["card"], relief="flat")
             else:
                 var = self.tk.StringVar(value="")
-                widget = ttk.Entry(parent, textvariable=var, width=36)
-            widget.grid(row=row, column=col + 1, sticky="ew", pady=(0, 8))
+                widget = self.tk.Entry(parent, textvariable=var, relief="flat", bg=COLORS["input"], highlightthickness=1, highlightbackground=COLORS["border"])
+            widget.grid(row=row, column=col + 1, sticky="ew", pady=(0, 10), ipady=5)
             self.form_vars[spec.name] = var
-        for col in range(4):
-            parent.columnconfigure(col, weight=1 if col % 2 == 1 else 0)
+
+    def _build_advanced_settings_group(self, parent: Any, field_names: List[str]) -> None:
+        parent.grid_columnconfigure(0, weight=1)
+        parent.grid_columnconfigure(1, weight=2)
+        parent.grid_rowconfigure(0, weight=1)
+        advanced_form = self.tk.Frame(parent, bg=COLORS["card"])
+        advanced_form.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        self._build_field_group(advanced_form, field_names)
+
+        raw_frame = self.tk.Frame(parent, bg=COLORS["card"])
+        raw_frame.grid(row=0, column=1, sticky="nsew")
+        raw_frame.grid_rowconfigure(1, weight=1)
+        raw_frame.grid_columnconfigure(0, weight=1)
+        bar = self.tk.Frame(raw_frame, bg=COLORS["card"])
+        bar.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+        self._primary_button(bar, "应用原始 JSON", self._apply_raw_to_form, primary=True).pack(side="left")
+        self._primary_button(bar, "从表单刷新 JSON", self._refresh_raw_from_form).pack(side="left", padx=(10, 0))
+        self.raw_text = self.scrolledtext.ScrolledText(raw_frame, wrap="none", height=20, undo=True, relief="flat", bg="#f8fbff")
+        self.raw_text.grid(row=1, column=0, sticky="nsew")
+
+    def _build_logs_page(self) -> None:
+        page = self.tk.Frame(self.content_host, bg=COLORS["bg"])
+        page.grid(row=0, column=0, sticky="nsew")
+        page.grid_columnconfigure(0, weight=2)
+        page.grid_columnconfigure(1, weight=1)
+        page.grid_rowconfigure(0, weight=1)
+        self.page_frames["logs"] = page
+
+        log_card = self._card(page, "完整运行日志")
+        log_card.grid(row=0, column=0, sticky="nsew", padx=(0, 14))
+        self.log_text = self.scrolledtext.ScrolledText(log_card, wrap="word", height=20, state="disabled", relief="flat", bg="#f8fbff")
+        self.log_text.pack(fill="both", expand=True, padx=14, pady=(8, 14))
+
+        help_card = self._card(page, "手动流程")
+        help_card.grid(row=0, column=1, sticky="nsew")
+        help_text = (
+            "1. 优选前断开 VPN，保证测速走本地直连。\n\n"
+            "2. 点击“只运行优选”生成新的 ip.txt。\n\n"
+            "3. 需要上传时连接代理或 VPN，再点击“上传到 GitHub”。\n\n"
+            "4. 如果结果不理想，到“结果”页选择备份恢复。"
+        )
+        self.tk.Label(help_card, text=help_text, bg=COLORS["card"], fg=COLORS["text"], justify="left", anchor="nw", font=("Microsoft YaHei UI", 10)).pack(fill="both", expand=True, padx=14, pady=(8, 14))
+
+    def _show_page(self, key: str) -> None:
+        self.active_page = key
+        for page_key, frame in self.page_frames.items():
+            if page_key == key:
+                frame.tkraise()
+            frame.grid(row=0, column=0, sticky="nsew")
+        for item in NAV_ITEMS:
+            button = self.nav_buttons[item.key]
+            active = item.key == key
+            button.configure(
+                bg=COLORS["blue"] if active else "#f1f5f9",
+                fg="#ffffff" if active else COLORS["text"],
+                activebackground=COLORS["blue_dark"] if active else COLORS["blue_soft"],
+            )
+            if active:
+                self.page_title_var.set(item.label)
+        if key in {"workbench", "results"}:
+            self._refresh_results()
+        elif key == "settings":
+            self._refresh_raw_from_form()
+
+    def _show_settings_group(self, group: str) -> None:
+        self.active_settings_group = group
+        for name, frame in self.settings_frames.items():
+            if name == group:
+                frame.tkraise()
+        for name, button in self.settings_buttons.items():
+            active = name == group
+            button.configure(
+                bg=COLORS["blue"] if active else COLORS["card"],
+                fg="#ffffff" if active else COLORS["text"],
+                activebackground=COLORS["blue_dark"] if active else COLORS["blue_soft"],
+            )
 
     def _browse_config(self) -> None:
         path = self.filedialog.askopenfilename(
@@ -507,9 +954,9 @@ class DesktopApp:
             self.messagebox.showerror("加载失败", f"无法读取配置文件：{exc}")
             return
         self._sync_config_to_form()
-        self.status_var.set(f"已加载配置: {path}")
+        self.status_var.set(f"已加载配置 {path}")
         self._refresh_raw_from_form()
-        self._refresh_results()
+        self._refresh_dashboard()
 
     def _save_to_disk(self) -> bool:
         try:
@@ -518,7 +965,8 @@ class DesktopApp:
         except Exception as exc:
             self.messagebox.showerror("保存失败", f"无法保存配置文件：{exc}")
             return False
-        self.status_var.set(f"已保存配置: {self.config_path_var.get()}")
+        self.status_var.set(f"已保存配置 {self.config_path_var.get()}")
+        self._refresh_dashboard()
         return True
 
     def _sync_config_to_form(self) -> None:
@@ -555,31 +1003,55 @@ class DesktopApp:
             return
         self._sync_config_to_form()
         self.status_var.set("已从原始 JSON 应用配置")
+        self._refresh_dashboard()
+
+    def _append_to_text_widget(self, widget: Any, line: str) -> None:
+        if widget is None:
+            return
+        widget.configure(state="normal")
+        widget.insert(self.tk.END, line + "\n")
+        widget.see(self.tk.END)
+        widget.configure(state="disabled")
 
     def _append_log(self, line: str) -> None:
-        if self.log_text is None:
+        self.log_lines.append(line)
+        self.log_lines = self.log_lines[-500:]
+        self._append_to_text_widget(self.log_text, line)
+        self._append_to_text_widget(self.dashboard_log_text, line)
+
+    def _clear_text_widget(self, widget: Any) -> None:
+        if widget is None:
             return
-        self.log_text.configure(state="normal")
-        self.log_text.insert(self.tk.END, line + "\n")
-        self.log_text.see(self.tk.END)
-        self.log_text.configure(state="disabled")
+        widget.configure(state="normal")
+        widget.delete("1.0", self.tk.END)
+        widget.configure(state="disabled")
 
     def _clear_log(self) -> None:
-        if self.log_text is None:
-            return
-        self.log_text.configure(state="normal")
-        self.log_text.delete("1.0", self.tk.END)
-        self.log_text.configure(state="disabled")
+        self.log_lines.clear()
+        self._clear_text_widget(self.log_text)
+        self._clear_text_widget(self.dashboard_log_text)
 
-    def _confirm_preflight(self, mode_label: str, sync_after: bool | None = None) -> bool:
-        self._sync_form_to_config()
-        report = build_preflight_report(
+    def _write_preflight_panel(self, report: PreflightReport) -> None:
+        if self.preflight_text is None:
+            return
+        self.preflight_text.configure(state="normal")
+        self.preflight_text.delete("1.0", self.tk.END)
+        self.preflight_text.insert("1.0", report.text)
+        self.preflight_text.configure(state="disabled")
+
+    def _build_current_preflight_report(self, mode_label: str = "工作台检查", sync_after: bool | None = None) -> PreflightReport:
+        return build_preflight_report(
             config_path=Path(self.config_path_var.get()).expanduser(),
             config=self.config_data,
             python_exe=self.python_var.get().strip() or sys.executable,
             mode_label=mode_label,
             sync_requested=sync_after,
         )
+
+    def _confirm_preflight(self, mode_label: str, sync_after: bool | None = None) -> bool:
+        self._sync_form_to_config()
+        report = self._build_current_preflight_report(mode_label, sync_after)
+        self._write_preflight_panel(report)
         if not report.can_continue:
             self.messagebox.showerror("运行前检查未通过", report.text)
             return False
@@ -592,6 +1064,7 @@ class DesktopApp:
         if not self._save_to_disk():
             return
         self._clear_log()
+        self._show_page("logs" if "--sync-only" in command else "workbench")
         try:
             self.runner.start_command(command, cwd=MAIN_SCRIPT_PATH.parent)
         except Exception as exc:
@@ -645,29 +1118,80 @@ class DesktopApp:
                 code = int(payload)
                 self.status_var.set(f"运行结束，退出码 {code}")
                 self._append_log(f"[结束] 退出码 {code}")
-                self._refresh_results()
+                self._refresh_dashboard()
         self.root.after(100, self._poll_runner_queue)
 
+    def _refresh_dashboard(self) -> None:
+        self._refresh_results()
+        self._write_preflight_panel(self._build_current_preflight_report())
+        proxy_url = str(self.config_data.get("GITHUB_SYNC_PROXY_URL", "")).strip()
+        self.github_status_var.set("已配置" if proxy_url else "未配置")
+        proxy_env = [key for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY") if os.environ.get(key)]
+        self.vpn_status_var.set("检测到代理变量" if proxy_env else "请确认 VPN 已断开")
+
     def _refresh_results(self) -> None:
-        if self.result_list is None:
-            return
-        output_file = Path(self.config_data.get("OUTPUT_FILE", "ip.txt"))
-        if not output_file.is_absolute():
-            output_file = Path(self.config_path_var.get()).expanduser().parent / output_file
+        config_path = Path(self.config_path_var.get()).expanduser()
+        output_file = resolve_output_path(config_path, self.config_data)
         self.output_file_var.set(str(output_file))
-        self.result_list.delete(0, self.tk.END)
-        if not output_file.exists():
-            self.result_count_var.set("结果: 0")
+
+        try:
+            lines = read_output_lines(config_path, self.config_data)
+        except Exception as exc:
+            lines = []
+            self._append_log(f"[结果] 无法读取输出文件: {exc}")
+
+        for listbox in (self.result_list, self.result_preview_list):
+            if listbox is None:
+                continue
+            listbox.delete(0, self.tk.END)
+            for line in lines:
+                listbox.insert(self.tk.END, line)
+
+        self.result_count_var.set(str(len(lines)))
+        self.port_share_var.set(calculate_port_share(lines))
+        if output_file.exists():
+            updated = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(output_file.stat().st_mtime))
+            self.output_updated_var.set(updated)
+        else:
+            self.output_updated_var.set("未生成")
+        self._refresh_backups()
+
+    def _refresh_backups(self) -> None:
+        config_path = Path(self.config_path_var.get()).expanduser()
+        try:
+            self.backup_paths = list_output_backups(config_path, self.config_data)
+        except Exception as exc:
+            self.backup_paths = []
+            self._append_log(f"[备份] 无法读取备份列表: {exc}")
+        self.backup_count_var.set(str(len(self.backup_paths)))
+        if self.backup_list is None:
+            return
+        self.backup_list.delete(0, self.tk.END)
+        for path in self.backup_paths:
+            self.backup_list.insert(self.tk.END, format_backup_label(path))
+
+    def _restore_selected_backup(self) -> None:
+        if self.backup_list is None:
+            return
+        selection = self.backup_list.curselection()
+        if not selection:
+            self.messagebox.showinfo("未选择备份", "请先选择一份历史备份。")
+            return
+        backup_path = self.backup_paths[selection[0]]
+        if not self.messagebox.askyesno("恢复备份", f"将用此备份覆盖当前 ip.txt：\n{backup_path.name}\n\n恢复前会先备份当前 ip.txt。继续？"):
             return
         try:
-            lines = [line.strip() for line in output_file.read_text(encoding="utf-8").splitlines() if line.strip()]
+            restored_path = restore_output_backup(
+                backup_path,
+                Path(self.config_path_var.get()).expanduser(),
+                self.config_data,
+            )
         except Exception as exc:
-            self.result_count_var.set("结果: 0")
-            self._append_log(f"[结果] 无法读取输出文件: {exc}")
+            self.messagebox.showerror("恢复失败", f"无法恢复备份：{exc}")
             return
-        for line in lines:
-            self.result_list.insert(self.tk.END, line)
-        self.result_count_var.set(f"结果: {len(lines)}")
+        self._append_log(f"[备份] 已恢复 {backup_path.name} -> {restored_path}")
+        self.status_var.set(f"已恢复备份 {backup_path.name}")
+        self._refresh_results()
 
     def _open_output_folder(self) -> None:
         folder = Path(self.output_file_var.get() or self.config_path_var.get()).expanduser().parent
