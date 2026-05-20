@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import queue
+import shutil
 import subprocess
 import sys
 import threading
@@ -19,6 +21,13 @@ class FieldSpec:
     label: str
     kind: str
     section: str
+
+
+@dataclass(frozen=True)
+class PreflightReport:
+    text: str
+    can_continue: bool
+    has_warnings: bool
 
 
 FIELD_SPECS: List[FieldSpec] = [
@@ -42,6 +51,9 @@ FIELD_SPECS: List[FieldSpec] = [
     FieldSpec("FILTER_BLOCKED_COUNTRIES_ENABLED", "屏蔽国家过滤", "bool", "源与筛选"),
     FieldSpec("BLOCKED_COUNTRIES", "屏蔽国家列表", "csv_str", "源与筛选"),
     FieldSpec("OUTPUT_FILE", "输出文件", "str", "通知与同步"),
+    FieldSpec("BACKUP_OUTPUT_ENABLED", "启用输出备份", "bool", "通知与同步"),
+    FieldSpec("OUTPUT_BACKUP_DIR", "输出备份目录", "str", "通知与同步"),
+    FieldSpec("OUTPUT_BACKUP_KEEP", "备份保留份数", "int", "通知与同步"),
     FieldSpec("STABILITY_STATS_FILE", "稳定性统计文件", "str", "通知与同步"),
     FieldSpec("LOG_FILE", "日志文件", "str", "通知与同步"),
     FieldSpec("CF_ENABLED", "启用 Cloudflare DNS", "bool", "通知与同步"),
@@ -74,6 +86,115 @@ def save_config_file(config: Mapping[str, Any], path: Path | str) -> None:
 
 def build_run_command(python_exe: str, main_script: str) -> List[str]:
     return [python_exe, "-u", main_script]
+
+
+def build_optimize_command(python_exe: str, main_script: str, sync_after: bool) -> List[str]:
+    command = build_run_command(python_exe, main_script)
+    if not sync_after:
+        command.append("--no-github-sync")
+    return command
+
+
+def build_sync_only_command(python_exe: str, main_script: str) -> List[str]:
+    return build_run_command(python_exe, main_script) + ["--sync-only"]
+
+
+PROXY_TEST_CODE = """
+import sys
+import urllib.request
+
+proxy_url = sys.argv[1] if len(sys.argv) > 1 else ""
+handlers = []
+if proxy_url:
+    handlers.append(urllib.request.ProxyHandler({"http": proxy_url, "https": proxy_url}))
+opener = urllib.request.build_opener(*handlers)
+request = urllib.request.Request("https://github.com/", headers={"User-Agent": "cfnb-desktop-tool"})
+response = opener.open(request, timeout=10)
+print(f"GitHub proxy test OK: HTTP {getattr(response, 'status', response.getcode())}")
+""".strip()
+
+
+def build_proxy_test_command(python_exe: str, proxy_url: str) -> List[str]:
+    return [python_exe, "-c", PROXY_TEST_CODE, proxy_url or ""]
+
+
+def _is_executable_available(python_exe: str) -> bool:
+    if not python_exe:
+        return False
+    expanded = Path(python_exe).expanduser()
+    return expanded.exists() or shutil.which(python_exe) is not None
+
+
+def _resolve_config_relative(config_path: Path, value: str) -> Path:
+    path = Path(value or "")
+    if path.is_absolute():
+        return path
+    return config_path.expanduser().parent / path
+
+
+def build_preflight_report(
+    config_path: Path,
+    config: Mapping[str, Any],
+    python_exe: str,
+    mode_label: str,
+    sync_requested: bool | None = None,
+    environ: Mapping[str, str] | None = None,
+) -> PreflightReport:
+    environ = os.environ if environ is None else environ
+    config_path = Path(config_path).expanduser()
+    errors: List[str] = []
+    warnings: List[str] = ["请确认优选前已断开 VPN，测速阶段应保持本地直连。"]
+    ok: List[str] = []
+
+    if config_path.exists():
+        ok.append(f"配置文件存在: {config_path}")
+    else:
+        errors.append(f"配置文件不存在: {config_path}")
+
+    if _is_executable_available(python_exe):
+        ok.append(f"Python 可用: {python_exe}")
+    else:
+        errors.append(f"Python 不可用: {python_exe}")
+
+    output_file = _resolve_config_relative(config_path, str(config.get("OUTPUT_FILE", "ip.txt")))
+    if output_file.parent.exists():
+        ok.append(f"输出目录存在: {output_file.parent}")
+    else:
+        warnings.append(f"输出目录当前不存在，运行时可能无法写入: {output_file.parent}")
+
+    if sync_requested is None:
+        sync_requested = "GitHub" in mode_label or "上传" in mode_label or bool(config.get("GITHUB_SYNC_ENABLED"))
+    if sync_requested:
+        script_name = "git_sync.ps1" if sys.platform == "win32" else "git_sync.sh"
+        script_path = MAIN_SCRIPT_PATH.parent / script_name
+        if script_path.exists():
+            ok.append(f"上传脚本存在: {script_name}")
+        else:
+            warnings.append(f"上传脚本不存在，GitHub 同步会跳过: {script_name}")
+
+    proxy_url = str(config.get("GITHUB_SYNC_PROXY_URL", "")).strip()
+    if proxy_url:
+        ok.append(f"GitHub 同步代理已填写: {proxy_url}")
+    elif sync_requested:
+        warnings.append("GitHub 同步代理为空；如果当前网络无法访问 GitHub，请先填写代理。")
+
+    proxy_env_keys = [
+        key for key, value in environ.items()
+        if key.upper() in {"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"} and value
+    ]
+    if proxy_env_keys:
+        warnings.append("检测到环境代理变量，优选前请确认它不会影响测速: " + ", ".join(sorted(proxy_env_keys)))
+
+    lines = [f"运行模式: {mode_label}", "", "检查结果:"]
+    lines.extend(f"[OK] {item}" for item in ok)
+    lines.extend(f"[WARN] {item}" for item in warnings)
+    lines.extend(f"[ERROR] {item}" for item in errors)
+
+    return PreflightReport(
+        text="\n".join(lines),
+        can_continue=not errors,
+        has_warnings=bool(warnings),
+    )
 
 
 def _split_csv_text(value: str) -> List[str]:
@@ -197,15 +318,20 @@ class ProcessRunner:
         return self.process is not None and self.process.poll() is None
 
     def start(self, python_exe: str, config_path: Path) -> None:
+        command = build_run_command(python_exe, str(MAIN_SCRIPT_PATH))
+        self.start_command(command, cwd=MAIN_SCRIPT_PATH.parent)
+
+    def start_command(self, command: List[str], cwd: Path | str | None = None, env_overrides: Mapping[str, str] | None = None) -> None:
         if self.running():
             raise RuntimeError("process already running")
 
-        command = build_run_command(python_exe, str(MAIN_SCRIPT_PATH))
-        env = dict(**__import__("os").environ)
+        env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
+        if env_overrides:
+            env.update(dict(env_overrides))
         self.process = subprocess.Popen(
             command,
-            cwd=str(MAIN_SCRIPT_PATH.parent),
+            cwd=str(cwd or MAIN_SCRIPT_PATH.parent),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -338,10 +464,12 @@ class DesktopApp:
 
         footer = ttk.Frame(self.root, padding=(12, 0, 12, 12))
         footer.pack(fill="x")
-        ttk.Button(footer, text="开始运行", command=self._start_run).pack(side="left")
+        ttk.Button(footer, text="只运行优选", command=lambda: self._start_optimize(sync_after=False)).pack(side="left")
+        ttk.Button(footer, text="优选后按设置自动上传", command=lambda: self._start_optimize(sync_after=True)).pack(side="left", padx=(8, 0))
+        ttk.Button(footer, text="上传到 GitHub", command=self._start_sync_only).pack(side="left", padx=(8, 0))
+        ttk.Button(footer, text="测试 GitHub 代理", command=self._start_proxy_test).pack(side="left", padx=(8, 0))
         ttk.Button(footer, text="停止", command=self.runner.stop).pack(side="left", padx=(8, 0))
         ttk.Button(footer, text="同步表单到配置", command=self._sync_form_to_config).pack(side="left", padx=(8, 0))
-        ttk.Button(footer, text="保存并运行", command=self._save_and_run).pack(side="left", padx=(8, 0))
 
     def _build_field_section(self, parent: Any, section: str) -> None:
         ttk = self.ttk
@@ -383,14 +511,15 @@ class DesktopApp:
         self._refresh_raw_from_form()
         self._refresh_results()
 
-    def _save_to_disk(self) -> None:
+    def _save_to_disk(self) -> bool:
         try:
             self._sync_form_to_config()
             save_config_file(self.config_data, Path(self.config_path_var.get()).expanduser())
         except Exception as exc:
             self.messagebox.showerror("保存失败", f"无法保存配置文件：{exc}")
-            return
+            return False
         self.status_var.set(f"已保存配置: {self.config_path_var.get()}")
+        return True
 
     def _sync_config_to_form(self) -> None:
         values = extract_common_field_values(self.config_data)
@@ -442,22 +571,65 @@ class DesktopApp:
         self.log_text.delete("1.0", self.tk.END)
         self.log_text.configure(state="disabled")
 
-    def _start_run(self) -> None:
+    def _confirm_preflight(self, mode_label: str, sync_after: bool | None = None) -> bool:
+        self._sync_form_to_config()
+        report = build_preflight_report(
+            config_path=Path(self.config_path_var.get()).expanduser(),
+            config=self.config_data,
+            python_exe=self.python_var.get().strip() or sys.executable,
+            mode_label=mode_label,
+            sync_requested=sync_after,
+        )
+        if not report.can_continue:
+            self.messagebox.showerror("运行前检查未通过", report.text)
+            return False
+        return self.messagebox.askyesno("运行前检查", report.text + "\n\n继续运行？")
+
+    def _start_command(self, command: List[str], status_text: str) -> None:
         if self.runner.running():
             self.messagebox.showinfo("运行中", "当前已有任务在运行。")
             return
-        self._save_to_disk()
+        if not self._save_to_disk():
+            return
         self._clear_log()
         try:
-            self.runner.start(self.python_var.get().strip() or sys.executable, Path(self.config_path_var.get()).expanduser())
+            self.runner.start_command(command, cwd=MAIN_SCRIPT_PATH.parent)
         except Exception as exc:
             self.messagebox.showerror("启动失败", f"无法启动任务：{exc}")
             return
-        self.status_var.set("运行中")
+        self.status_var.set(status_text)
+
+    def _start_optimize(self, sync_after: bool) -> None:
+        mode_label = "优选后按设置自动上传" if sync_after else "只运行优选"
+        if not self._confirm_preflight(mode_label, sync_after=sync_after):
+            return
+        command = build_optimize_command(
+            self.python_var.get().strip() or sys.executable,
+            str(MAIN_SCRIPT_PATH),
+            sync_after=sync_after,
+        )
+        self._start_command(command, "运行中")
+
+    def _start_sync_only(self) -> None:
+        if not self._confirm_preflight("上传到 GitHub", sync_after=True):
+            return
+        command = build_sync_only_command(self.python_var.get().strip() or sys.executable, str(MAIN_SCRIPT_PATH))
+        self._start_command(command, "正在上传到 GitHub")
+
+    def _start_proxy_test(self) -> None:
+        self._sync_form_to_config()
+        proxy_url = str(self.config_data.get("GITHUB_SYNC_PROXY_URL", "")).strip()
+        if not proxy_url:
+            self.messagebox.showinfo("代理为空", "请先填写 GitHub 同步代理地址。")
+            return
+        command = build_proxy_test_command(self.python_var.get().strip() or sys.executable, proxy_url)
+        self._start_command(command, "正在测试 GitHub 代理")
+
+    def _start_run(self) -> None:
+        self._start_optimize(sync_after=True)
 
     def _save_and_run(self) -> None:
-        self._save_to_disk()
-        self._start_run()
+        self._start_optimize(sync_after=True)
 
     def _poll_runner_queue(self) -> None:
         while True:

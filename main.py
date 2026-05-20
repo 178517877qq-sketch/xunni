@@ -18,6 +18,7 @@ import subprocess
 import shutil
 import json
 import ipaddress
+import argparse
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -153,6 +154,9 @@ def load_config():
         "CF_OFFICIAL_COUNTRY_CODE": "CF",
         "OUTPUT_FILE": "ip.txt",
         "OUTPUT_NODE_LIMIT": 24,
+        "BACKUP_OUTPUT_ENABLED": True,
+        "OUTPUT_BACKUP_DIR": "backups",
+        "OUTPUT_BACKUP_KEEP": 20,
         "STABILITY_SCORING_ENABLED": True,
         "STABILITY_STATS_FILE": "ip_stats.json",
         "STABILITY_HISTORY_WEIGHT": 1.0,
@@ -240,6 +244,9 @@ CF_OFFICIAL_SAMPLE_PORTS = cfg["CF_OFFICIAL_SAMPLE_PORTS"]
 CF_OFFICIAL_COUNTRY_CODE = cfg["CF_OFFICIAL_COUNTRY_CODE"]
 OUTPUT_FILE = cfg["OUTPUT_FILE"]
 OUTPUT_NODE_LIMIT = cfg["OUTPUT_NODE_LIMIT"]
+BACKUP_OUTPUT_ENABLED = cfg["BACKUP_OUTPUT_ENABLED"]
+OUTPUT_BACKUP_DIR = cfg["OUTPUT_BACKUP_DIR"]
+OUTPUT_BACKUP_KEEP = cfg["OUTPUT_BACKUP_KEEP"]
 STABILITY_SCORING_ENABLED = cfg["STABILITY_SCORING_ENABLED"]
 STABILITY_STATS_FILE = cfg["STABILITY_STATS_FILE"]
 STABILITY_HISTORY_WEIGHT = cfg["STABILITY_HISTORY_WEIGHT"]
@@ -492,6 +499,50 @@ def _resolve_local_path(path):
     if os.path.isabs(path):
         return path
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
+
+def _output_backup_pattern(output_path):
+    return os.path.basename(output_path) + ".*.bak"
+
+def _prune_output_backups(backup_dir, output_path, keep):
+    keep = max(0, int(keep))
+    if keep <= 0 or not os.path.isdir(backup_dir):
+        return
+
+    import glob
+
+    pattern = os.path.join(backup_dir, _output_backup_pattern(output_path))
+    backups = sorted(glob.glob(pattern), key=lambda path: (os.path.getmtime(path), path), reverse=True)
+    for stale_path in backups[keep:]:
+        try:
+            os.remove(stale_path)
+        except OSError as e:
+            print(f"⚠️ 清理旧备份失败 ({stale_path}): {e}")
+
+def backup_output_file(output_file=None, backup_dir=None, keep=None, enabled=None):
+    enabled = BACKUP_OUTPUT_ENABLED if enabled is None else enabled
+    if not enabled:
+        return None
+
+    output_path = _resolve_local_path(output_file or OUTPUT_FILE)
+    if not os.path.exists(output_path):
+        return None
+
+    backup_root = _resolve_local_path(backup_dir or OUTPUT_BACKUP_DIR)
+    keep_count = OUTPUT_BACKUP_KEEP if keep is None else keep
+    os.makedirs(backup_root, exist_ok=True)
+
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    basename = os.path.basename(output_path)
+    backup_path = os.path.join(backup_root, f"{basename}.{timestamp}.bak")
+    counter = 1
+    while os.path.exists(backup_path):
+        backup_path = os.path.join(backup_root, f"{basename}.{timestamp}-{counter}.bak")
+        counter += 1
+
+    shutil.copy2(output_path, backup_path)
+    _prune_output_backups(backup_root, output_path, keep_count)
+    print(f"已备份旧输出文件到 {backup_path}")
+    return backup_path
 
 def load_local_seed_files(paths):
     """读取本地种子文件，支持全量ip.txt、重要ip.txt 等标准节点列表。"""
@@ -1244,7 +1295,7 @@ def sync_to_github():
     )
     print(f"⚠️ 已尝试 {max_retries} 次推送，均失败，请检查网络或 GitHub 仓库状态。")
 
-def main():
+def run_optimization(no_github_sync=False):
     mode_str = f"全局最优{GLOBAL_TOP_N}个" if USE_GLOBAL_MODE else f"每个国家最优{PER_COUNTRY_TOP_N}个"
     print(f"当前模式：{mode_str}，每个节点测试 {TCP_PROBES} 次 TCP 连接")
     print(f"最低成功率要求：{MIN_SUCCESS_RATE*100:.0f}%")
@@ -1425,6 +1476,7 @@ def main():
             else:
                 print(f"{i}. {node} 速度 {speed:.2f} Mbps 综合分 {score:.2f}")
 
+    backup_output_file(OUTPUT_FILE)
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         for node_str in final_selected:
             f.write(node_str + "\n")
@@ -1446,7 +1498,30 @@ def main():
         latency_map=latency_map
     )
 
+    maybe_sync_to_github(no_github_sync=no_github_sync)
+
+def maybe_sync_to_github(no_github_sync=False):
+    if no_github_sync:
+        print("GitHub sync skipped for this run.")
+        return False
     sync_to_github()
+    return True
+
+def parse_cli_args(argv=None):
+    parser = argparse.ArgumentParser(description="Cloudflare IP 优选工具")
+    parser.add_argument("--no-github-sync", action="store_true", help="本轮只优选，不上传到 GitHub")
+    parser.add_argument("--sync-only", action="store_true", help="不测速，只上传当前 ip.txt 到 GitHub")
+    return parser.parse_args(argv)
+
+def run_cli(argv=None):
+    args = parse_cli_args(argv)
+    if args.sync_only:
+        sync_to_github()
+        return
+    run_optimization(no_github_sync=args.no_github_sync)
+
+def main(argv=None):
+    run_cli(argv)
 
 if __name__ == "__main__":
     import atexit

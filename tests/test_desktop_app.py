@@ -1,4 +1,5 @@
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -84,6 +85,49 @@ class DesktopAppHelperTests(unittest.TestCase):
         cmd = desktop_app.build_run_command(r"C:\\Python\\python.exe", r"C:\\repo\\main.py")
 
         self.assertEqual([r"C:\\Python\\python.exe", "-u", r"C:\\repo\\main.py"], cmd)
+
+    def test_desktop_commands_support_optimize_sync_and_proxy_test_modes(self):
+        python_exe = r"C:\\Python\\python.exe"
+        main_script = r"C:\\repo\\main.py"
+
+        self.assertEqual(
+            [python_exe, "-u", main_script, "--no-github-sync"],
+            desktop_app.build_optimize_command(python_exe, main_script, sync_after=False),
+        )
+        self.assertEqual(
+            [python_exe, "-u", main_script],
+            desktop_app.build_optimize_command(python_exe, main_script, sync_after=True),
+        )
+        self.assertEqual(
+            [python_exe, "-u", main_script, "--sync-only"],
+            desktop_app.build_sync_only_command(python_exe, main_script),
+        )
+
+        proxy_cmd = desktop_app.build_proxy_test_command(python_exe, "http://127.0.0.1:7890")
+
+        self.assertEqual(python_exe, proxy_cmd[0])
+        self.assertEqual("-c", proxy_cmd[1])
+        self.assertIn("github.com", proxy_cmd[2])
+        self.assertEqual("http://127.0.0.1:7890", proxy_cmd[3])
+
+    def test_preflight_report_warns_about_proxy_environment_without_blocking(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            config_path = root / "config.json"
+            config_path.write_text("{}", encoding="utf-8")
+
+            report = desktop_app.build_preflight_report(
+                config_path=config_path,
+                config={"OUTPUT_FILE": "ip.txt", "GITHUB_SYNC_PROXY_URL": "http://127.0.0.1:7890"},
+                python_exe=sys.executable,
+                mode_label="只运行优选",
+                environ={"HTTPS_PROXY": "http://127.0.0.1:7890"},
+            )
+
+        self.assertTrue(report.can_continue)
+        self.assertTrue(report.has_warnings)
+        self.assertIn("断开 VPN", report.text)
+        self.assertIn("HTTPS_PROXY", report.text)
 
 
 if __name__ == "__main__":

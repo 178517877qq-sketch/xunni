@@ -3,3 +3,4 @@ git_sync.ps1
 git_sync.sh
 __pycache__/
 ip_stats.json
+backups/
