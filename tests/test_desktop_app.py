@@ -230,6 +230,12 @@ class DesktopAppHelperTests(unittest.TestCase):
             [action.icon for action in desktop_app.WORKBENCH_ACTIONS],
         )
 
+    def test_render_badge_image_returns_square_rgba_asset(self):
+        image = desktop_app.render_badge_image("RUN", "#2563eb")
+
+        self.assertEqual((40, 40), image.size)
+        self.assertEqual("RGBA", image.mode)
+
     def test_split_setting_fields_for_columns_keeps_row_style_columns_balanced(self):
         self.assertEqual(
             [["A", "C", "E"], ["B", "D"]],

@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping
 
+from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageTk
+
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().with_name("config.json")
 MAIN_SCRIPT_PATH = Path(__file__).resolve().with_name("main.py")
 
@@ -211,6 +213,57 @@ def accent_surface(accent: str) -> str:
         COLORS["muted"]: "#e2e8f0",
         "#7c3aed": "#ede9fe",
     }.get(accent, COLORS["blue_soft"])
+
+
+def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+    return ImageColor.getrgb(hex_color)
+
+
+def _load_badge_font(size: int) -> ImageFont.ImageFont:
+    windir = Path(os.environ.get("WINDIR", r"C:\Windows"))
+    candidates = [
+        windir / "Fonts" / "segoeuib.ttf",
+        windir / "Fonts" / "segoeui.ttf",
+        windir / "Fonts" / "arialbd.ttf",
+        windir / "Fonts" / "arial.ttf",
+    ]
+    for path in candidates:
+        if path.exists():
+            try:
+                return ImageFont.truetype(str(path), size=size)
+            except OSError:
+                continue
+    return ImageFont.load_default()
+
+
+def render_badge_image(
+    label: str,
+    accent: str,
+    size: int = 40,
+    background: str | None = None,
+    border: str | None = None,
+) -> Image.Image:
+    bg = background or accent_surface(accent)
+    outline = border or "#d7e2f0"
+    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle(
+        [1, 1, size - 2, size - 2],
+        radius=max(8, size // 4),
+        fill=_hex_to_rgb(bg),
+        outline=_hex_to_rgb(outline),
+        width=1,
+    )
+    font_size = max(12, int(size * 0.34))
+    font = _load_badge_font(font_size)
+    bbox = draw.textbbox((0, 0), label, font=font)
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
+    x = (size - text_w) / 2 - bbox[0]
+    y = (size - text_h) / 2 - bbox[1] - 1
+    draw.text((x, y), label, font=font, fill=_hex_to_rgb(accent))
+    return image
+
 
 BUTTON_VARIANTS = {
     "primary": {
@@ -759,6 +812,7 @@ class DesktopApp:
         self.nav_buttons: Dict[str, Any] = {}
         self.nav_labels: Dict[str, Any] = {}
         self.toolbar_buttons: Dict[str, Any] = {}
+        self.badge_images: Dict[str, Any] = {}
         self.settings_frames: Dict[str, Any] = {}
         self.settings_buttons: Dict[str, Any] = {}
         self.active_page = "workbench"
@@ -807,31 +861,37 @@ class DesktopApp:
         tk.Label(sidebar, text="cfnb", bg=COLORS["sidebar"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 14, "bold")).pack(pady=(24, 14))
         tk.Frame(sidebar, bg=COLORS["border"], height=1).pack(fill="x", padx=16, pady=(0, 16))
         for item in NAV_ITEMS:
-            nav_item = tk.Frame(sidebar, bg=COLORS["sidebar"])
-            nav_item.pack(fill="x", padx=12, pady=6)
-            nav_item.grid_columnconfigure(0, weight=1)
             button = tk.Button(
-                nav_item,
-                text=item.short_label,
+                sidebar,
+                text=item.label,
+                image=self._badge_photo(
+                    f"nav-{item.key}-inactive",
+                    item.short_label,
+                    COLORS["muted"],
+                    size=36,
+                    background="#eef3f8",
+                ),
                 command=lambda key=item.key: self._show_page(key),
                 relief="flat",
                 bd=0,
-                width=6,
-                height=2,
-                font=("Microsoft YaHei UI", 10, "bold"),
+                width=86,
+                height=74,
+                font=("Microsoft YaHei UI", 8, "bold"),
                 cursor="hand2",
-                bg="#eff4fa",
+                compound="top",
+                justify="center",
+                wraplength=70,
+                bg="#f8fbff",
                 fg=COLORS["text"],
-                activebackground=COLORS["blue_dark"],
-                activeforeground="#ffffff",
+                activebackground=COLORS["blue_soft"],
+                activeforeground=COLORS["blue_dark"],
                 highlightbackground=COLORS["border"],
                 highlightthickness=1,
+                padx=4,
+                pady=4,
             )
-            button.grid(row=0, column=0, sticky="ew")
-            label = tk.Label(nav_item, text=item.label, bg=COLORS["sidebar"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 8))
-            label.grid(row=1, column=0, pady=(6, 0))
+            button.pack(fill="x", padx=12, pady=6)
             self.nav_buttons[item.key] = button
-            self.nav_labels[item.key] = label
 
         tk.Label(sidebar, text="手动", bg=COLORS["sidebar"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(side="bottom", pady=(0, 18))
 
@@ -894,6 +954,20 @@ class DesktopApp:
             self.tk.Label(frame, text=subtitle, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(anchor="w", padx=padding, pady=(0, 4))
         return frame
 
+    def _badge_photo(
+        self,
+        cache_key: str,
+        label: str,
+        accent: str,
+        size: int = 40,
+        background: str | None = None,
+        border: str | None = None,
+    ) -> Any:
+        if cache_key not in self.badge_images:
+            image = render_badge_image(label, accent, size=size, background=background, border=border)
+            self.badge_images[cache_key] = ImageTk.PhotoImage(image, master=self.root)
+        return self.badge_images[cache_key]
+
     def _metric_card(
         self,
         parent: Any,
@@ -908,15 +982,15 @@ class DesktopApp:
         body.pack(fill="x", padx=12, pady=12)
         body.grid_columnconfigure(1, weight=1)
 
-        icon_label = self.tk.Label(
-            body,
-            text=icon or title[:2],
-            bg=accent_surface(accent),
-            fg=accent,
-            width=5,
-            height=2,
-            font=("Microsoft YaHei UI", 9, "bold"),
+        badge = self._badge_photo(
+            f"metric-{title}-{icon}",
+            icon or title[:2],
+            accent,
+            size=40,
+            background=accent_surface(accent),
         )
+        icon_label = self.tk.Label(body, image=badge, bg=COLORS["card"])
+        icon_label.image = badge
         icon_label.grid(row=0, column=0, rowspan=2, sticky="nw", padx=(0, 12))
 
         text_stack = self.tk.Frame(body, bg=COLORS["card"])
@@ -966,29 +1040,29 @@ class DesktopApp:
     def _build_action_tile(self, parent: Any, action: WorkbenchAction, command: Callable[[], None]) -> Any:
         tile = self.tk.Frame(
             parent,
-            bg=COLORS["card"],
-            highlightbackground=COLORS["border"],
+            bg=COLORS["soft_panel"],
+            highlightbackground="#d8e2ee",
             highlightthickness=1,
             bd=0,
         )
         tile.grid_columnconfigure(1, weight=1)
         tile.grid_rowconfigure(0, weight=1)
 
-        icon = self.tk.Label(
-            tile,
-            text=action.icon,
-            bg=accent_surface(action.accent),
-            fg=action.accent,
-            width=5,
-            height=2,
-            font=("Microsoft YaHei UI", 9, "bold"),
+        badge = self._badge_photo(
+            f"action-{action.key}",
+            action.icon,
+            action.accent,
+            size=42,
+            background=accent_surface(action.accent),
         )
+        icon = self.tk.Label(tile, image=badge, bg=COLORS["soft_panel"])
+        icon.image = badge
         icon.grid(row=0, column=0, rowspan=2, sticky="nw", padx=12, pady=12)
 
-        text_stack = self.tk.Frame(tile, bg=COLORS["card"])
+        text_stack = self.tk.Frame(tile, bg=COLORS["soft_panel"])
         text_stack.grid(row=0, column=1, sticky="ew", padx=(0, 12), pady=(12, 0))
-        self.tk.Label(text_stack, text=action.label, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).pack(anchor="w")
-        self.tk.Label(text_stack, text=action.hint, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 8)).pack(anchor="w", pady=(3, 0))
+        self.tk.Label(text_stack, text=action.label, bg=COLORS["soft_panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).pack(anchor="w")
+        self.tk.Label(text_stack, text=action.hint, bg=COLORS["soft_panel"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 8)).pack(anchor="w", pady=(3, 0))
 
         self._bind_click_recursive(tile, command)
         return tile
@@ -1292,14 +1366,22 @@ class DesktopApp:
             frame.grid(row=0, column=0, sticky="nsew")
         for item in NAV_ITEMS:
             button = self.nav_buttons[item.key]
-            label = self.nav_labels[item.key]
             active = item.key == key
-            button.configure(
-                bg=COLORS["blue"] if active else "#f1f5f9",
-                fg="#ffffff" if active else COLORS["text"],
-                activebackground=COLORS["blue_dark"] if active else COLORS["blue_soft"],
+            image = self._badge_photo(
+                f"nav-{item.key}-{'active' if active else 'inactive'}",
+                item.short_label,
+                COLORS["blue_dark"] if active else COLORS["muted"],
+                size=36,
+                background=accent_surface(COLORS["blue_dark"] if active else COLORS["muted"]),
             )
-            label.configure(fg=COLORS["blue_dark"] if active else COLORS["muted"])
+            button.configure(
+                image=image,
+                bg="#eaf2ff" if active else "#f8fbff",
+                fg=COLORS["blue_dark"] if active else COLORS["text"],
+                activebackground="#dbeafe" if active else "#eef3f8",
+                activeforeground=COLORS["blue_dark"] if active else COLORS["text"],
+            )
+            button.image = image
             if active:
                 self.page_title_var.set(item.label)
         if key in {"workbench", "results"}:
