@@ -908,7 +908,7 @@ class DesktopApp:
         self.backup_count_var = tk.StringVar(value="0")
         self.backup_detail_var = tk.StringVar(value="保留 20 份")
         self.output_file_var = tk.StringVar(value="")
-        self.banner_text_var = tk.StringVar(value="断VPN测速 · 上传代理")
+        self.banner_text_var = tk.StringVar(value="直连测速，代理上传")
         self.status_accent_vars: Dict[str, Any] = {}
 
         self.config_data: Dict[str, Any] = {}
@@ -916,6 +916,7 @@ class DesktopApp:
         self.page_frames: Dict[str, Any] = {}
         self.nav_buttons: Dict[str, Any] = {}
         self.nav_labels: Dict[str, Any] = {}
+        self.page_tab_buttons: Dict[str, Any] = {}
         self.toolbar_buttons: Dict[str, Any] = {}
         self.badge_images: Dict[str, Any] = {}
         self.surface_images: Dict[str, Any] = {}
@@ -1015,7 +1016,7 @@ class DesktopApp:
         main = tk.Frame(shell, bg=COLORS["bg"])
         main.grid(row=0, column=1, sticky="nsew", padx=(8, 30), pady=22)
         main.grid_columnconfigure(0, weight=1)
-        main.grid_rowconfigure(1, weight=1)
+        main.grid_rowconfigure(2, weight=1)
 
         header = tk.Frame(main, bg=COLORS["bg"])
         header.grid(row=0, column=0, sticky="ew", pady=(0, 16))
@@ -1027,7 +1028,7 @@ class DesktopApp:
         tk.Label(title_stack, textvariable=self.page_title_var, bg=COLORS["bg"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 19, "bold")).pack(anchor="w")
         tk.Label(title_stack, textvariable=self.status_var, bg=COLORS["bg"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(anchor="w", pady=(5, 0))
 
-        banner = tk.Frame(header, bg=COLORS["bg"], width=374, height=58, highlightthickness=0)
+        banner = tk.Frame(header, bg=COLORS["bg"], width=430, height=58, highlightthickness=0)
         banner.grid(row=0, column=1, padx=(22, 16))
         banner.grid_propagate(False)
         self._install_rounded_surface(
@@ -1038,10 +1039,12 @@ class DesktopApp:
             shadow=True,
             cache_key="top-banner",
         )
-        banner.grid_columnconfigure(1, weight=1)
-        tk.Label(banner, text="提示", bg=COLORS["blue_soft"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 8, "bold"), padx=10, pady=5).grid(row=0, column=0, padx=(14, 10), pady=9, sticky="w")
-        tk.Label(banner, textvariable=self.banner_text_var, bg=COLORS["panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).grid(row=0, column=1, sticky="w")
-        self._primary_button(banner, "测试代理", self._start_proxy_test, variant="soft").grid(row=0, column=2, padx=(8, 12), pady=9, sticky="e")
+        banner_inner = tk.Frame(banner, bg=COLORS["panel"])
+        banner_inner.pack(fill="both", expand=True, padx=14, pady=9)
+        tk.Label(banner_inner, text="提示", bg=COLORS["blue_soft"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 8, "bold"), padx=10, pady=5).pack(side="left")
+        tk.Label(banner_inner, textvariable=self.banner_text_var, bg=COLORS["panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold"), anchor="w").pack(side="left", padx=(12, 8))
+        tk.Frame(banner_inner, bg=COLORS["panel"]).pack(side="left", fill="x", expand=True)
+        self._primary_button(banner_inner, "代理", self._start_proxy_test, variant="soft").pack(side="right")
 
         toolbar = tk.Frame(header, bg=COLORS["bg"])
         toolbar.grid(row=0, column=2, sticky="e")
@@ -1055,8 +1058,31 @@ class DesktopApp:
             button.pack(side="left", padx=(8, 0))
             self.toolbar_buttons[action.key] = button
 
+        page_switcher = tk.Frame(main, bg=COLORS["bg"], width=628, height=58)
+        page_switcher.grid(row=1, column=0, pady=(0, 16))
+        page_switcher.grid_propagate(False)
+        self._install_rounded_surface(
+            page_switcher,
+            fill=COLORS["panel"],
+            border="#e2e8f0",
+            radius=29,
+            shadow=True,
+            cache_key="page-switcher",
+        )
+        for index in range(len(NAV_ITEMS)):
+            page_switcher.grid_columnconfigure(index, weight=1, uniform="page-tabs")
+        for index, item in enumerate(NAV_ITEMS):
+            tab = self._primary_button(
+                page_switcher,
+                item.label,
+                lambda key=item.key: self._show_page(key),
+                variant="soft" if item.key == self.active_page else "ghost",
+            )
+            tab.grid(row=0, column=index, padx=(10 if index == 0 else 4, 10 if index == len(NAV_ITEMS) - 1 else 4), pady=10, sticky="ew")
+            self.page_tab_buttons[item.key] = tab
+
         self.content_host = tk.Frame(main, bg=COLORS["bg"])
-        self.content_host.grid(row=1, column=0, sticky="nsew")
+        self.content_host.grid(row=2, column=0, sticky="nsew")
         self.content_host.grid_rowconfigure(0, weight=1)
         self.content_host.grid_columnconfigure(0, weight=1)
 
@@ -1166,8 +1192,10 @@ class DesktopApp:
         icon: str = "",
     ) -> Any:
         frame = self._card(parent)
+        accent_line = self.tk.Frame(frame, bg=accent, height=3)
+        accent_line.pack(fill="x", padx=18, pady=(13, 0))
         body = self.tk.Frame(frame, bg=COLORS["card"])
-        body.pack(fill="x", padx=14, pady=14)
+        body.pack(fill="x", padx=14, pady=(11, 14))
         body.grid_columnconfigure(1, weight=1)
 
         badge = self._badge_photo(
@@ -1307,6 +1335,8 @@ class DesktopApp:
             self._bind_click_recursive(child, command)
 
     def _build_action_tile(self, parent: Any, action: WorkbenchAction, command: Callable[[], None]) -> Any:
+        base_border = "#93c5fd" if action.key == "optimize_only" else "#e1e8f2"
+        hover_border = "#2563eb" if action.key == "optimize_only" else "#bfd5f2"
         tile = self.tk.Frame(
             parent,
             bg=parent.cget("bg") if hasattr(parent, "cget") else COLORS["card"],
@@ -1317,7 +1347,7 @@ class DesktopApp:
         self._install_rounded_surface(
             tile,
             fill="#ffffff",
-            border="#e1e8f2",
+            border=base_border,
             radius=18,
             shadow=True,
             cache_key=f"action-{action.key}",
@@ -1326,7 +1356,7 @@ class DesktopApp:
         tile.grid_rowconfigure(0, weight=1)
         tile._hover_progress = 0.0
         tile._hover_anim_job = None
-        tile._surface_shadow_alpha = 30
+        tile._surface_shadow_alpha = 34 if action.key == "optimize_only" else 30
         tile._surface_shadow_offset = (4, 6)
         tile._surface_shadow_blur = 9
 
@@ -1353,8 +1383,8 @@ class DesktopApp:
         def draw_tile(progress: float) -> None:
             progress = max(0.0, min(1.0, progress))
             fill = _blend_hex("#ffffff", "#f7fbff", progress)
-            border = _blend_hex("#e1e8f2", "#bfd5f2", progress)
-            shadow_alpha = int(round(28 + 8 * progress))
+            border = _blend_hex(base_border, hover_border, progress)
+            shadow_alpha = int(round((32 if action.key == "optimize_only" else 28) + 8 * progress))
             shadow_blur = 8 + int(round(progress))
             shadow_offset = (4, 6 - int(round(progress)))
             tile._surface_fill = fill
@@ -1746,6 +1776,10 @@ class DesktopApp:
                 icon.image = image
             if active:
                 self.page_title_var.set(item.label)
+        for item in NAV_ITEMS:
+            tab = self.page_tab_buttons.get(item.key)
+            if tab is not None and hasattr(tab, "_set_button_variant"):
+                tab._set_button_variant("soft" if item.key == key else "ghost")
         if key in {"workbench", "results"}:
             self._refresh_results()
         elif key == "settings":
