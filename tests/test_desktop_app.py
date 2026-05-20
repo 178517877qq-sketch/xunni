@@ -220,6 +220,16 @@ class DesktopAppHelperTests(unittest.TestCase):
             [action.variant for action in desktop_app.APP_TOOLBAR_ACTIONS],
         )
 
+    def test_workbench_actions_match_cockpit_style_quick_tiles(self):
+        self.assertEqual(
+            ["optimize_only", "optimize_sync", "sync_only", "proxy_test", "stop_task", "save_config", "refresh_dashboard", "open_output_folder"],
+            [action.key for action in desktop_app.WORKBENCH_ACTIONS],
+        )
+        self.assertEqual(
+            ["RUN", "AUTO", "GH", "TEST", "STOP", "SAVE", "REF", "DIR"],
+            [action.icon for action in desktop_app.WORKBENCH_ACTIONS],
+        )
+
     def test_split_setting_fields_for_columns_keeps_row_style_columns_balanced(self):
         self.assertEqual(
             [["A", "C", "E"], ["B", "D"]],

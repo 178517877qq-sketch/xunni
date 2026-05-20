@@ -39,6 +39,15 @@ class ToolbarAction:
 
 
 @dataclass(frozen=True)
+class WorkbenchAction:
+    key: str
+    label: str
+    hint: str
+    icon: str
+    accent: str
+
+
+@dataclass(frozen=True)
 class StatusCard:
     title: str
     icon: str
@@ -65,6 +74,17 @@ APP_TOOLBAR_ACTIONS: List[ToolbarAction] = [
     ToolbarAction("refresh_dashboard", "刷新检查", "ghost"),
     ToolbarAction("save_config", "保存配置", "secondary"),
     ToolbarAction("open_output_folder", "输出目录", "soft"),
+]
+
+WORKBENCH_ACTIONS: List[WorkbenchAction] = [
+    WorkbenchAction("optimize_only", "只运行优选", "本地直连测速", "RUN", "#2563eb"),
+    WorkbenchAction("optimize_sync", "优选后自动上传", "完成后直连 GitHub", "AUTO", "#0f766e"),
+    WorkbenchAction("sync_only", "上传到 GitHub", "只同步当前 ip.txt", "GH", "#16a34a"),
+    WorkbenchAction("proxy_test", "测试 GitHub 代理", "验证同步通道", "TEST", "#0f766e"),
+    WorkbenchAction("stop_task", "停止当前任务", "中断当前运行", "STOP", "#dc2626"),
+    WorkbenchAction("save_config", "保存配置", "写回 config.json", "SAVE", "#2563eb"),
+    WorkbenchAction("refresh_dashboard", "刷新检查", "重载状态与结果", "REF", "#475569"),
+    WorkbenchAction("open_output_folder", "打开输出目录", "查看结果和备份", "DIR", "#7c3aed"),
 ]
 
 SETTINGS_FIELD_GROUPS: Dict[str, List[str]] = {
@@ -179,6 +199,18 @@ COLORS = {
     "red": "#dc2626",
     "input": "#eef2f7",
 }
+
+
+def accent_surface(accent: str) -> str:
+    return {
+        COLORS["blue"]: "#dbeafe",
+        COLORS["blue_dark"]: "#dbeafe",
+        COLORS["teal"]: "#ccfbf1",
+        COLORS["green"]: "#dcfce7",
+        COLORS["red"]: "#fee2e2",
+        COLORS["muted"]: "#e2e8f0",
+        "#7c3aed": "#ede9fe",
+    }.get(accent, COLORS["blue_soft"])
 
 BUTTON_VARIANTS = {
     "primary": {
@@ -713,16 +745,19 @@ class DesktopApp:
         self.github_status_var = tk.StringVar(value="未检查")
         self.vpn_status_var = tk.StringVar(value="请断开 VPN 后优选")
         self.vpn_detail_var = tk.StringVar(value="测速阶段保持本地直连")
-        self.result_detail_var = tk.StringVar(value="443 占比 0%")
+        self.result_detail_var = tk.StringVar(value="443 优先输出")
         self.github_detail_var = tk.StringVar(value="上传阶段可单独走代理")
         self.backup_count_var = tk.StringVar(value="0")
+        self.backup_detail_var = tk.StringVar(value="保留最近 20 份")
         self.output_file_var = tk.StringVar(value="")
+        self.banner_text_var = tk.StringVar(value="优选前先断开 VPN，上传阶段再单独走代理。")
         self.status_accent_vars: Dict[str, Any] = {}
 
         self.config_data: Dict[str, Any] = {}
         self.form_vars: Dict[str, Any] = {}
         self.page_frames: Dict[str, Any] = {}
         self.nav_buttons: Dict[str, Any] = {}
+        self.nav_labels: Dict[str, Any] = {}
         self.toolbar_buttons: Dict[str, Any] = {}
         self.settings_frames: Dict[str, Any] = {}
         self.settings_buttons: Dict[str, Any] = {}
@@ -765,25 +800,38 @@ class DesktopApp:
         shell.grid_columnconfigure(1, weight=1)
         shell.grid_rowconfigure(0, weight=1)
 
-        sidebar = tk.Frame(shell, bg=COLORS["sidebar"], width=96, highlightbackground=COLORS["border"], highlightthickness=1)
+        sidebar = tk.Frame(shell, bg=COLORS["sidebar"], width=112, highlightbackground=COLORS["border"], highlightthickness=1)
         sidebar.grid(row=0, column=0, sticky="ns")
         sidebar.grid_propagate(False)
 
-        tk.Label(sidebar, text="cfnb", bg=COLORS["sidebar"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 14, "bold")).pack(pady=(24, 18))
+        tk.Label(sidebar, text="cfnb", bg=COLORS["sidebar"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 14, "bold")).pack(pady=(24, 14))
+        tk.Frame(sidebar, bg=COLORS["border"], height=1).pack(fill="x", padx=16, pady=(0, 16))
         for item in NAV_ITEMS:
+            nav_item = tk.Frame(sidebar, bg=COLORS["sidebar"])
+            nav_item.pack(fill="x", padx=12, pady=6)
+            nav_item.grid_columnconfigure(0, weight=1)
             button = tk.Button(
-                sidebar,
-                text=f"{item.short_label}\n{item.label}",
+                nav_item,
+                text=item.short_label,
                 command=lambda key=item.key: self._show_page(key),
                 relief="flat",
                 bd=0,
-                width=9,
-                height=3,
-                font=("Microsoft YaHei UI", 8, "bold"),
+                width=6,
+                height=2,
+                font=("Microsoft YaHei UI", 10, "bold"),
                 cursor="hand2",
+                bg="#eff4fa",
+                fg=COLORS["text"],
+                activebackground=COLORS["blue_dark"],
+                activeforeground="#ffffff",
+                highlightbackground=COLORS["border"],
+                highlightthickness=1,
             )
-            button.pack(padx=12, pady=6)
+            button.grid(row=0, column=0, sticky="ew")
+            label = tk.Label(nav_item, text=item.label, bg=COLORS["sidebar"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 8))
+            label.grid(row=1, column=0, pady=(6, 0))
             self.nav_buttons[item.key] = button
+            self.nav_labels[item.key] = label
 
         tk.Label(sidebar, text="手动", bg=COLORS["sidebar"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(side="bottom", pady=(0, 18))
 
@@ -793,15 +841,24 @@ class DesktopApp:
         main.grid_rowconfigure(1, weight=1)
 
         header = tk.Frame(main, bg=COLORS["bg"])
-        header.grid(row=0, column=0, sticky="ew", pady=(0, 18))
-        header.grid_columnconfigure(0, weight=1)
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 16))
+        header.grid_columnconfigure(0, weight=0)
+        header.grid_columnconfigure(1, weight=1)
+        header.grid_columnconfigure(2, weight=0)
         title_stack = tk.Frame(header, bg=COLORS["bg"])
         title_stack.grid(row=0, column=0, sticky="w")
-        tk.Label(title_stack, textvariable=self.page_title_var, bg=COLORS["bg"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 22, "bold")).pack(anchor="w")
-        tk.Label(title_stack, textvariable=self.status_var, bg=COLORS["bg"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 10)).pack(anchor="w", pady=(4, 0))
+        tk.Label(title_stack, textvariable=self.page_title_var, bg=COLORS["bg"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 19, "bold")).pack(anchor="w")
+        tk.Label(title_stack, textvariable=self.status_var, bg=COLORS["bg"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(anchor="w", pady=(5, 0))
+
+        banner = tk.Frame(header, bg=COLORS["panel"], highlightbackground=COLORS["border"], highlightthickness=1)
+        banner.grid(row=0, column=1, sticky="ew", padx=(22, 16))
+        banner.grid_columnconfigure(1, weight=1)
+        tk.Label(banner, text="提示", bg=COLORS["blue_soft"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 8, "bold"), padx=10, pady=4).grid(row=0, column=0, padx=(14, 12), pady=10, sticky="w")
+        tk.Label(banner, textvariable=self.banner_text_var, bg=COLORS["panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).grid(row=0, column=1, sticky="w")
+        self._primary_button(banner, "测试代理", self._start_proxy_test, variant="soft").grid(row=0, column=2, padx=12, pady=8, sticky="e")
 
         toolbar = tk.Frame(header, bg=COLORS["bg"])
-        toolbar.grid(row=0, column=1, sticky="e")
+        toolbar.grid(row=0, column=2, sticky="e")
         for action in APP_TOOLBAR_ACTIONS:
             button = self._primary_button(
                 toolbar,
@@ -848,14 +905,14 @@ class DesktopApp:
     ) -> Any:
         frame = self._card(parent)
         body = self.tk.Frame(frame, bg=COLORS["card"])
-        body.pack(fill="x", padx=14, pady=14)
+        body.pack(fill="x", padx=12, pady=12)
         body.grid_columnconfigure(1, weight=1)
 
         icon_label = self.tk.Label(
             body,
             text=icon or title[:2],
-            bg=accent,
-            fg="#ffffff",
+            bg=accent_surface(accent),
+            fg=accent,
             width=5,
             height=2,
             font=("Microsoft YaHei UI", 9, "bold"),
@@ -865,7 +922,7 @@ class DesktopApp:
         text_stack = self.tk.Frame(body, bg=COLORS["card"])
         text_stack.grid(row=0, column=1, sticky="ew")
         self.tk.Label(text_stack, text=title, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).pack(anchor="w")
-        value_label = self.tk.Label(text_stack, textvariable=variable, bg=COLORS["card"], fg=accent, font=("Microsoft YaHei UI", 22, "bold"))
+        value_label = self.tk.Label(text_stack, textvariable=variable, bg=COLORS["card"], fg=accent, font=("Microsoft YaHei UI", 20, "bold"))
         value_label.pack(anchor="w", pady=(2, 0))
         if detail_variable is not None:
             self.tk.Label(text_stack, textvariable=detail_variable, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(anchor="w", pady=(0, 0))
@@ -900,6 +957,42 @@ class DesktopApp:
             cursor="hand2",
         )
 
+    def _bind_click_recursive(self, widget: Any, command: Callable[[], None]) -> None:
+        widget.configure(cursor="hand2")
+        widget.bind("<Button-1>", lambda _event, cb=command: cb())
+        for child in widget.winfo_children():
+            self._bind_click_recursive(child, command)
+
+    def _build_action_tile(self, parent: Any, action: WorkbenchAction, command: Callable[[], None]) -> Any:
+        tile = self.tk.Frame(
+            parent,
+            bg=COLORS["card"],
+            highlightbackground=COLORS["border"],
+            highlightthickness=1,
+            bd=0,
+        )
+        tile.grid_columnconfigure(1, weight=1)
+        tile.grid_rowconfigure(0, weight=1)
+
+        icon = self.tk.Label(
+            tile,
+            text=action.icon,
+            bg=accent_surface(action.accent),
+            fg=action.accent,
+            width=5,
+            height=2,
+            font=("Microsoft YaHei UI", 9, "bold"),
+        )
+        icon.grid(row=0, column=0, rowspan=2, sticky="nw", padx=12, pady=12)
+
+        text_stack = self.tk.Frame(tile, bg=COLORS["card"])
+        text_stack.grid(row=0, column=1, sticky="ew", padx=(0, 12), pady=(12, 0))
+        self.tk.Label(text_stack, text=action.label, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).pack(anchor="w")
+        self.tk.Label(text_stack, text=action.hint, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 8)).pack(anchor="w", pady=(3, 0))
+
+        self._bind_click_recursive(tile, command)
+        return tile
+
     def _build_workbench_page(self) -> None:
         page = self.tk.Frame(self.content_host, bg=COLORS["bg"])
         page.grid(row=0, column=0, sticky="nsew")
@@ -910,37 +1003,42 @@ class DesktopApp:
 
         metrics = self.tk.Frame(page, bg=COLORS["bg"])
         metrics.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 16))
-        for col in range(3):
+        for col in range(5):
             metrics.grid_columnconfigure(col, weight=1, uniform="metrics")
         vpn_card = self._metric_card(metrics, "VPN/代理提醒", self.vpn_status_var, COLORS["red"], self.vpn_detail_var, icon="VPN")
         vpn_card.grid(row=0, column=0, sticky="ew", padx=(0, 12))
         self.status_accent_vars["vpn"] = vpn_card.value_label
-        result_card = self._metric_card(metrics, "当前 ip.txt", self.result_count_var, COLORS["blue_dark"], self.result_detail_var, icon="IP")
+        result_card = self._metric_card(metrics, "当前 ip.txt", self.result_count_var, COLORS["blue_dark"], self.output_updated_var, icon="IP")
         result_card.grid(row=0, column=1, sticky="ew", padx=6)
         self.status_accent_vars["result"] = result_card.value_label
+        share_card = self._metric_card(metrics, "443 占比", self.port_share_var, COLORS["teal"], self.result_detail_var, icon="443")
+        share_card.grid(row=0, column=2, sticky="ew", padx=6)
         github_card = self._metric_card(metrics, "GitHub 上传", self.github_status_var, COLORS["green"], self.github_detail_var, icon="GH")
-        github_card.grid(row=0, column=2, sticky="ew", padx=(12, 0))
+        github_card.grid(row=0, column=3, sticky="ew", padx=6)
         self.status_accent_vars["github"] = github_card.value_label
+        backup_card = self._metric_card(metrics, "备份数量", self.backup_count_var, "#7c3aed", self.backup_detail_var, icon="BAK")
+        backup_card.grid(row=0, column=4, sticky="ew", padx=(12, 0))
 
         left = self.tk.Frame(page, bg=COLORS["bg"])
         left.grid(row=1, column=0, sticky="nsew", padx=(0, 14))
         left.grid_rowconfigure(2, weight=1)
         left.grid_columnconfigure(0, weight=1)
 
-        action_card = self._card(left, "手动操作", "优选阶段建议断开 VPN；上传阶段可单独走代理。")
+        action_card = self._card(left, "快捷操作", "像 cockpit 一样把常用动作收进一块，少读字，多点一下。")
         action_card.grid(row=0, column=0, sticky="ew", pady=(0, 14))
         actions = self.tk.Frame(action_card, bg=COLORS["card"])
-        actions.pack(fill="x", padx=14, pady=(8, 14))
+        actions.pack(fill="x", padx=12, pady=(6, 14))
         for col in range(4):
             actions.grid_columnconfigure(col, weight=1, uniform="actions")
-        self._primary_button(actions, "只运行优选", lambda: self._start_optimize(sync_after=False), primary=True).grid(row=0, column=0, sticky="ew", padx=(0, 8))
-        self._primary_button(actions, "优选后自动上传", lambda: self._start_optimize(sync_after=True), variant="soft").grid(row=0, column=1, sticky="ew", padx=4)
-        self._primary_button(actions, "上传到 GitHub", self._start_sync_only).grid(row=0, column=2, sticky="ew", padx=4)
-        self._primary_button(actions, "测试 GitHub 代理", self._start_proxy_test).grid(row=0, column=3, sticky="ew", padx=(8, 0))
-        self._primary_button(actions, "停止当前任务", self.runner.stop, variant="danger").grid(row=1, column=0, sticky="ew", pady=(10, 0), padx=(0, 8))
-        self._primary_button(actions, "保存配置", self._save_to_disk, variant="secondary").grid(row=1, column=1, sticky="ew", pady=(10, 0), padx=4)
-        self._primary_button(actions, "刷新检查", self._refresh_dashboard, variant="secondary").grid(row=1, column=2, sticky="ew", pady=(10, 0), padx=4)
-        self._primary_button(actions, "打开输出目录", self._open_output_folder, variant="secondary").grid(row=1, column=3, sticky="ew", pady=(10, 0), padx=(8, 0))
+        for index, action in enumerate(WORKBENCH_ACTIONS):
+            tile = self._build_action_tile(
+                actions,
+                action,
+                lambda key=action.key: self._run_workbench_action(key),
+            )
+            row = index // 4
+            col = index % 4
+            tile.grid(row=row, column=col, sticky="nsew", padx=6, pady=6)
 
         preview_card = self._card(left, "最新结果预览", "客户端还会二次优选，这里优先保持 443 输出稳定。")
         preview_card.grid(row=1, column=0, sticky="ew", pady=(0, 14))
@@ -1023,10 +1121,19 @@ class DesktopApp:
         body.grid(row=1, column=0, sticky="nsew")
         body.grid_columnconfigure(0, weight=1)
         body.grid_rowconfigure(1, weight=1)
-        tabs = self.tk.Frame(body, bg=COLORS["card"])
-        tabs.grid(row=0, column=0, sticky="ew", padx=14, pady=(14, 8))
+        tabs_host = self.tk.Frame(body, bg=COLORS["card"])
+        tabs_host.grid(row=0, column=0, sticky="ew", padx=14, pady=(14, 8))
+        tabs_host.grid_columnconfigure(0, weight=1)
+        tabs_host.grid_columnconfigure(2, weight=1)
+        tabs = self.tk.Frame(tabs_host, bg=COLORS["card"])
+        tabs.grid(row=0, column=1)
         for group in SETTINGS_FIELD_GROUPS:
-            button = self._primary_button(tabs, group, lambda name=group: self._show_settings_group(name), variant="soft" if group == self.active_settings_group else "secondary")
+            button = self._primary_button(
+                tabs,
+                group,
+                lambda name=group: self._show_settings_group(name),
+                variant="soft" if group == self.active_settings_group else "secondary",
+            )
             button.pack(side="left", padx=(0, 8))
             self.settings_buttons[group] = button
 
@@ -1150,6 +1257,33 @@ class DesktopApp:
             return
         raise ValueError(f"unknown toolbar action: {key}")
 
+    def _run_workbench_action(self, key: str) -> None:
+        if key == "optimize_only":
+            self._start_optimize(sync_after=False)
+            return
+        if key == "optimize_sync":
+            self._start_optimize(sync_after=True)
+            return
+        if key == "sync_only":
+            self._start_sync_only()
+            return
+        if key == "proxy_test":
+            self._start_proxy_test()
+            return
+        if key == "stop_task":
+            self.runner.stop()
+            return
+        if key == "save_config":
+            self._save_to_disk()
+            return
+        if key == "refresh_dashboard":
+            self._refresh_dashboard()
+            return
+        if key == "open_output_folder":
+            self._open_output_folder()
+            return
+        raise ValueError(f"unknown workbench action: {key}")
+
     def _show_page(self, key: str) -> None:
         self.active_page = key
         for page_key, frame in self.page_frames.items():
@@ -1158,12 +1292,14 @@ class DesktopApp:
             frame.grid(row=0, column=0, sticky="nsew")
         for item in NAV_ITEMS:
             button = self.nav_buttons[item.key]
+            label = self.nav_labels[item.key]
             active = item.key == key
             button.configure(
                 bg=COLORS["blue"] if active else "#f1f5f9",
                 fg="#ffffff" if active else COLORS["text"],
                 activebackground=COLORS["blue_dark"] if active else COLORS["blue_soft"],
             )
+            label.configure(fg=COLORS["blue_dark"] if active else COLORS["muted"])
             if active:
                 self.page_title_var.set(item.label)
         if key in {"workbench", "results"}:
@@ -1383,7 +1519,7 @@ class DesktopApp:
         self.vpn_status_var.set(vpn_card.value)
         self.vpn_detail_var.set(vpn_card.detail)
         self.result_count_var.set(output_card.value)
-        self.result_detail_var.set(f"443 占比 {output_card.detail}")
+        self.port_share_var.set(output_card.detail)
         self.github_status_var.set(github_card.value)
         self.github_detail_var.set(github_card.detail)
         for key, card in zip(("vpn", "result", "github"), cards):
@@ -1416,6 +1552,9 @@ class DesktopApp:
             self.output_updated_var.set(updated)
         else:
             self.output_updated_var.set("未生成")
+        keep = int(self.config_data.get("OUTPUT_BACKUP_KEEP", 20) or 20)
+        backup_dir = resolve_backup_dir(config_path, self.config_data)
+        self.backup_detail_var.set(f"{backup_dir.name} · 保留最近 {keep} 份")
         self._refresh_backups()
 
     def _refresh_backups(self) -> None:
