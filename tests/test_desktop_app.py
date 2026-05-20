@@ -229,6 +229,10 @@ class DesktopAppHelperTests(unittest.TestCase):
             ["RUN", "AUTO", "GH", "TEST", "STOP", "SAVE", "REF", "DIR"],
             [action.icon for action in desktop_app.WORKBENCH_ACTIONS],
         )
+        self.assertEqual(
+            ["优选", "自动上传", "同步", "测代理", "停止", "保存", "刷新", "输出目录"],
+            [action.label for action in desktop_app.WORKBENCH_ACTIONS],
+        )
 
     def test_render_badge_image_returns_square_rgba_asset(self):
         image = desktop_app.render_badge_image("RUN", "#2563eb")

@@ -79,14 +79,14 @@ APP_TOOLBAR_ACTIONS: List[ToolbarAction] = [
 ]
 
 WORKBENCH_ACTIONS: List[WorkbenchAction] = [
-    WorkbenchAction("optimize_only", "只运行优选", "本地直连测速", "RUN", "#2563eb"),
-    WorkbenchAction("optimize_sync", "优选后自动上传", "完成后直连 GitHub", "AUTO", "#0f766e"),
-    WorkbenchAction("sync_only", "上传到 GitHub", "只同步当前 ip.txt", "GH", "#16a34a"),
-    WorkbenchAction("proxy_test", "测试 GitHub 代理", "验证同步通道", "TEST", "#0f766e"),
-    WorkbenchAction("stop_task", "停止当前任务", "中断当前运行", "STOP", "#dc2626"),
-    WorkbenchAction("save_config", "保存配置", "写回 config.json", "SAVE", "#2563eb"),
-    WorkbenchAction("refresh_dashboard", "刷新检查", "重载状态与结果", "REF", "#475569"),
-    WorkbenchAction("open_output_folder", "打开输出目录", "查看结果和备份", "DIR", "#7c3aed"),
+    WorkbenchAction("optimize_only", "优选", "本地直连测速", "RUN", "#2563eb"),
+    WorkbenchAction("optimize_sync", "自动上传", "完成后同步", "AUTO", "#0f766e"),
+    WorkbenchAction("sync_only", "同步", "当前订阅", "GH", "#16a34a"),
+    WorkbenchAction("proxy_test", "测代理", "验证通道", "TEST", "#0f766e"),
+    WorkbenchAction("stop_task", "停止", "中断任务", "STOP", "#dc2626"),
+    WorkbenchAction("save_config", "保存", "写回配置", "SAVE", "#2563eb"),
+    WorkbenchAction("refresh_dashboard", "刷新", "重载状态", "REF", "#475569"),
+    WorkbenchAction("open_output_folder", "输出目录", "查看备份", "DIR", "#7c3aed"),
 ]
 
 SETTINGS_FIELD_GROUPS: Dict[str, List[str]] = {
@@ -832,13 +832,13 @@ class DesktopApp:
         self.output_updated_var = tk.StringVar(value="未生成")
         self.github_status_var = tk.StringVar(value="未检查")
         self.vpn_status_var = tk.StringVar(value="请断开 VPN 后优选")
-        self.vpn_detail_var = tk.StringVar(value="测速阶段保持本地直连")
+        self.vpn_detail_var = tk.StringVar(value="测速走本地直连")
         self.result_detail_var = tk.StringVar(value="443 优先输出")
-        self.github_detail_var = tk.StringVar(value="上传阶段可单独走代理")
+        self.github_detail_var = tk.StringVar(value="上传走代理")
         self.backup_count_var = tk.StringVar(value="0")
         self.backup_detail_var = tk.StringVar(value="保留 20 份")
         self.output_file_var = tk.StringVar(value="")
-        self.banner_text_var = tk.StringVar(value="测速前断 VPN，上传再开代理。")
+        self.banner_text_var = tk.StringVar(value="断VPN测速 · 上传代理")
         self.status_accent_vars: Dict[str, Any] = {}
 
         self.config_data: Dict[str, Any] = {}
@@ -928,15 +928,12 @@ class DesktopApp:
             )
             icon = tk.Label(nav_body, image=badge, bg="#f8fbff")
             icon.image = badge
-            icon.grid(row=0, column=0, pady=(2, 3))
-            label = tk.Label(nav_body, text=item.label, bg="#f8fbff", fg=COLORS["muted"], font=("Microsoft YaHei UI", 8, "bold"))
-            label.grid(row=1, column=0, pady=(0, 3))
+            icon.grid(row=0, column=0, sticky="n", pady=(10, 0))
             nav_shell._nav_icon = icon
-            nav_shell._nav_label = label
             nav_shell._nav_item = item
             self._bind_click_recursive(nav_shell, lambda key=item.key: self._show_page(key))
             self.nav_buttons[item.key] = nav_shell
-            self.nav_labels[item.key] = label
+            self.nav_labels[item.key] = None
 
         tk.Label(sidebar, text="手动", bg=COLORS["sidebar"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(side="bottom", pady=(0, 18))
 
@@ -1501,7 +1498,6 @@ class DesktopApp:
             if hasattr(button, "_surface_redraw"):
                 button._surface_redraw()
             icon = getattr(button, "_nav_icon", None)
-            label = getattr(button, "_nav_label", None)
             if icon is not None:
                 image = self._badge_photo(
                     f"nav-{item.key}-{'active' if active else 'inactive'}",
@@ -1512,8 +1508,6 @@ class DesktopApp:
                 )
                 icon.configure(image=image, bg="#f8fbff")
                 icon.image = image
-            if label is not None:
-                label.configure(fg=COLORS["blue_dark"] if active else COLORS["muted"], bg="#f8fbff")
             if active:
                 self.page_title_var.set(item.label)
         if key in {"workbench", "results"}:
@@ -1767,8 +1761,7 @@ class DesktopApp:
         else:
             self.output_updated_var.set("未生成")
         keep = int(self.config_data.get("OUTPUT_BACKUP_KEEP", 20) or 20)
-        backup_dir = resolve_backup_dir(config_path, self.config_data)
-        self.backup_detail_var.set(f"{backup_dir.name} · 保留 {keep} 份")
+        self.backup_detail_var.set(f"保留 {keep} 份")
         self._refresh_backups()
 
     def _refresh_backups(self) -> None:
