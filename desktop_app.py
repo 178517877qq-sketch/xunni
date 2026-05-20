@@ -79,6 +79,13 @@ NAV_ITEM_GLYPHS = {
     "logs": "Log",
 }
 
+PAGE_TITLES = {
+    "workbench": "工作台",
+    "results": "结果",
+    "settings": "应用设置",
+    "logs": "日志/帮助",
+}
+
 APP_TOOLBAR_ACTIONS: List[ToolbarAction] = [
     ToolbarAction("refresh_dashboard", "刷新检查", "ghost"),
     ToolbarAction("save_config", "保存配置", "secondary"),
@@ -189,6 +196,48 @@ FIELD_SPECS: List[FieldSpec] = [
 ]
 
 FIELD_SPEC_BY_NAME = {spec.name: spec for spec in FIELD_SPECS}
+
+SETTING_DESCRIPTIONS = {
+    "USE_GLOBAL_MODE": "使用全局 TopN 输出策略，适合统一控制总量。",
+    "GLOBAL_TOP_N": "全局模式下最终保留的候选数量。",
+    "PER_COUNTRY_TOP_N": "分国家模式下每个国家保留的节点数。",
+    "BANDWIDTH_CANDIDATES": "进入带宽测速阶段的候选池大小。",
+    "OUTPUT_NODE_LIMIT": "写入 ip.txt 的最终节点上限。",
+    "MIN_SUCCESS_RATE": "TCP 可用性筛选的最低成功率。",
+    "TIMEOUT": "单次 TCP 探测超时时间。",
+    "TCP_PROBES": "每个节点 TCP 探测次数。",
+    "BANDWIDTH_SIZE_MB": "下载测速使用的数据大小。",
+    "TEST_AVAILABILITY": "优选前先做可用性检测。",
+    "STABILITY_SCORING_ENABLED": "结合历史结果给节点稳定性加权。",
+    "FILTER_COUNTRIES_ENABLED": "只输出允许国家列表中的节点。",
+    "ENABLE_CF_OFFICIAL_IP_SAMPLING": "从 Cloudflare 官方 IP 段抽样补充候选。",
+    "CF_OFFICIAL_SAMPLE_PER_24": "每个 /24 网段抽取的 IP 数量。",
+    "CF_OFFICIAL_SAMPLE_PORTS": "官方采样时使用的端口列表。",
+    "LOCAL_SEED_FILES": "本地全量 IP 或重要 IP 种子文件。",
+    "ALLOWED_COUNTRIES": "允许输出的国家或地区代码。",
+    "FILTER_BLOCKED_COUNTRIES_ENABLED": "启用屏蔽国家过滤。",
+    "BLOCKED_COUNTRIES": "需要排除的国家或地区代码。",
+    "OUTPUT_FILE": "最终订阅源输出文件。",
+    "BACKUP_OUTPUT_ENABLED": "覆盖 ip.txt 前自动保存旧版本。",
+    "OUTPUT_BACKUP_DIR": "历史备份保存目录。",
+    "OUTPUT_BACKUP_KEEP": "最多保留的备份份数。",
+    "STABILITY_STATS_FILE": "历史稳定性统计数据文件。",
+    "LOG_FILE": "运行日志输出文件。",
+    "CF_ENABLED": "是否启用 Cloudflare DNS 更新。",
+    "DNS_UPDATE_TARGET_COUNT": "同步 DNS 时使用的节点数量。",
+    "ENABLE_WXPUSHER": "运行结束后发送 WxPusher 通知。",
+    "GITHUB_SYNC_ENABLED": "优选完成后是否自动同步 GitHub。",
+    "GITHUB_SYNC_PROXY_URL": "GitHub 上传阶段使用的代理地址。",
+    "GITHUB_SYNC_MAX_RETRIES": "GitHub 同步失败后的重试次数。",
+    "ENABLE_LOGGING": "把运行过程写入日志文件。",
+    "MAX_WORKERS": "主测速流程最大并发线程。",
+    "AVAILABILITY_WORKERS": "可用性检测并发线程。",
+    "BANDWIDTH_WORKERS": "带宽测速并发线程。",
+    "AVAILABILITY_RETRY_MAX": "可用性检测失败重试次数。",
+    "BANDWIDTH_RETRY_MAX": "带宽测速失败重试次数。",
+    "CF_OFFICIAL_COUNTRY_CODE": "官方采样结果默认国家码。",
+    "CF_DNS_RECORD_NAME": "Cloudflare DNS 记录名。",
+}
 
 COLORS = {
     "bg": "#f5f8fb",
@@ -1328,6 +1377,94 @@ class DesktopApp:
         button.bind("<Leave>", lambda _event: animate_to(0.0), add="+")
         return button
 
+    def _entry_control(self, parent: Any, variable: Any, width: int = 256) -> Any:
+        control = self.tk.Frame(parent, bg=COLORS["card"], width=width, height=38, bd=0, highlightthickness=0)
+        control.grid_propagate(False)
+        control.pack_propagate(False)
+        self._install_rounded_surface(
+            control,
+            fill="#eef3f8",
+            border="#ccd6e3",
+            radius=11,
+            shadow=False,
+            cache_key=f"entry-control-{id(control)}",
+        )
+        entry = self.tk.Entry(
+            control,
+            textvariable=variable,
+            relief="flat",
+            bg="#eef3f8",
+            fg=COLORS["text"],
+            insertbackground=COLORS["blue_dark"],
+            bd=0,
+            highlightthickness=0,
+            font=("Microsoft YaHei UI", 10),
+        )
+        entry.pack(fill="both", expand=True, padx=14, pady=7)
+
+        def set_focus(active: bool) -> None:
+            control._surface_border = "#93c5fd" if active else "#ccd6e3"
+            control._surface_fill = "#f8fbff" if active else "#eef3f8"
+            entry.configure(bg=control._surface_fill)
+            if hasattr(control, "_surface_redraw"):
+                control._surface_redraw()
+
+        entry.bind("<FocusIn>", lambda _event: set_focus(True), add="+")
+        entry.bind("<FocusOut>", lambda _event: set_focus(False), add="+")
+        return control
+
+    def _toggle_control(self, parent: Any, variable: Any, width: int = 92) -> Any:
+        height = 34
+        toggle = self.tk.Canvas(
+            parent,
+            width=width,
+            height=height,
+            bg=parent.cget("bg") if hasattr(parent, "cget") else COLORS["card"],
+            bd=0,
+            highlightthickness=0,
+            cursor="hand2",
+        )
+        toggle._toggle_hover = False
+
+        def draw_toggle() -> None:
+            enabled = bool(variable.get())
+            hover = bool(getattr(toggle, "_toggle_hover", False))
+            fill = "#dbeafe" if enabled else "#eef3f8"
+            border = "#93c5fd" if enabled else "#ccd6e3"
+            if hover:
+                fill = _blend_hex(fill, "#ffffff", 0.18)
+                border = _blend_hex(border, COLORS["blue"], 0.24)
+            fg = COLORS["blue_dark"] if enabled else COLORS["muted"]
+            label = "开启" if enabled else "关闭"
+            image = render_rounded_surface(
+                width,
+                height,
+                fill,
+                border,
+                radius=height // 2,
+                shadow=hover,
+                shadow_alpha=28,
+                shadow_offset=(3, 4),
+                shadow_blur=7,
+            )
+            photo_key = f"toggle-{id(toggle)}:{enabled}:{hover}"
+            photo = ImageTk.PhotoImage(image, master=self.root)
+            self.surface_images[photo_key] = photo
+            toggle.delete("all")
+            toggle.create_image(0, 0, image=photo, anchor="nw")
+            toggle.create_text(width // 2, height // 2, text=label, fill=fg, font=("Microsoft YaHei UI", 10, "bold"))
+            toggle.image = photo
+
+        def flip() -> None:
+            variable.set(not bool(variable.get()))
+
+        variable.trace_add("write", lambda *_args: draw_toggle())
+        toggle.bind("<Button-1>", lambda _event: flip(), add="+")
+        toggle.bind("<Enter>", lambda _event: (setattr(toggle, "_toggle_hover", True), draw_toggle()), add="+")
+        toggle.bind("<Leave>", lambda _event: (setattr(toggle, "_toggle_hover", False), draw_toggle()), add="+")
+        draw_toggle()
+        return toggle
+
     def _bind_click_recursive(self, widget: Any, command: Callable[[], None]) -> None:
         widget.configure(cursor="hand2")
         widget.bind("<Button-1>", lambda _event, cb=command: cb())
@@ -1545,7 +1682,7 @@ class DesktopApp:
         page.grid_rowconfigure(1, weight=1)
         self.page_frames["settings"] = page
 
-        top = self._card(page, "配置文件", "日常只改常用项；完整 JSON 保留在高级页兜底。")
+        top = self._card(page, "配置文件", "本地配置保留在 config.json，高级页可直接编辑完整 JSON。")
         top.grid(row=0, column=0, sticky="ew", pady=(0, 16))
         top_inner = self.tk.Frame(top, bg=COLORS["card"])
         top_inner.pack(fill="x", padx=14, pady=(8, 14))
@@ -1601,65 +1738,78 @@ class DesktopApp:
         self._show_settings_group("常用")
 
     def _build_setting_row(self, parent: Any, spec: FieldSpec) -> Any:
-        row = self.tk.Frame(
-            parent,
-            bg=parent.cget("bg") if hasattr(parent, "cget") else COLORS["card"],
-            highlightbackground=COLORS["border"],
-            highlightthickness=0,
-            bd=0,
-        )
-        self._install_rounded_surface(
-            row,
-            fill=COLORS["soft_panel"],
-            border="#d8e2ee",
-            radius=14,
-            shadow=False,
-            cache_key=f"setting-row-{spec.name}",
-        )
+        row = self.tk.Frame(parent, bg=COLORS["card"], bd=0, highlightthickness=0)
+        row.configure(height=82)
+        row.grid_propagate(False)
         row.grid_columnconfigure(0, weight=1)
-        label_stack = self.tk.Frame(row, bg=COLORS["soft_panel"])
-        label_stack.grid(row=0, column=0, sticky="ew", padx=12, pady=10)
-        self.tk.Label(label_stack, text=spec.label, bg=COLORS["soft_panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 9, "bold"), justify="left", anchor="w", wraplength=180).pack(anchor="w")
-        self.tk.Label(label_stack, text=spec.name, bg=COLORS["soft_panel"], fg=COLORS["muted"], font=("Consolas", 8), justify="left", anchor="w", wraplength=180).pack(anchor="w", pady=(3, 0))
+        row.grid_columnconfigure(1, weight=0)
+        label_stack = self.tk.Frame(row, bg=COLORS["card"])
+        label_stack.grid(row=0, column=0, sticky="ew", padx=22, pady=13)
+        self.tk.Label(label_stack, text=spec.label, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold"), justify="left", anchor="w", wraplength=360).pack(anchor="w")
+        self.tk.Label(label_stack, text=SETTING_DESCRIPTIONS.get(spec.name, spec.name), bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9), justify="left", anchor="w", wraplength=440).pack(anchor="w", pady=(5, 0))
 
         if spec.kind == "bool":
             var = self.tk.BooleanVar(value=False)
-            widget = self.tk.Checkbutton(
-                row,
-                variable=var,
-                bg=COLORS["soft_panel"],
-                activebackground=COLORS["soft_panel"],
-                relief="flat",
-                selectcolor=COLORS["card"],
-                bd=0,
-            )
-            widget.grid(row=0, column=1, sticky="e", padx=(8, 12), pady=10)
+            widget = self._toggle_control(row, var)
+            widget.grid(row=0, column=1, sticky="e", padx=(16, 22), pady=22)
         else:
             var = self.tk.StringVar(value="")
-            widget = self.tk.Entry(
-                row,
-                textvariable=var,
-                relief="flat",
-                bg=COLORS["card"],
-                highlightthickness=1,
-                highlightbackground=COLORS["border"],
-                width=26,
-            )
-            widget.grid(row=0, column=1, sticky="ew", padx=(8, 12), pady=10, ipady=5)
+            widget = self._entry_control(row, var)
+            widget.grid(row=0, column=1, sticky="e", padx=(16, 22), pady=21)
+        self.tk.Frame(row, bg="#e8eef6", height=1).grid(row=1, column=0, columnspan=2, sticky="ew", padx=22)
         self.form_vars[spec.name] = var
         return row
 
     def _build_field_group(self, parent: Any, field_names: List[str]) -> None:
         parent.grid_rowconfigure(0, weight=1)
-        columns = split_setting_fields_for_columns(field_names, columns=2)
-        for col_index, names in enumerate(columns):
-            parent.grid_columnconfigure(col_index, weight=1, uniform="settings-columns")
-            column_frame = self.tk.Frame(parent, bg=COLORS["card"])
-            column_frame.grid(row=0, column=col_index, sticky="nsew", padx=(0, 8) if col_index == 0 else (8, 0))
-            column_frame.grid_columnconfigure(0, weight=1)
-            for row_index, name in enumerate(names):
-                row = self._build_setting_row(column_frame, FIELD_SPEC_BY_NAME[name])
-                row.grid(row=row_index, column=0, sticky="ew", pady=(0, 8))
+        parent.grid_columnconfigure(0, weight=1)
+        list_card = self.tk.Frame(parent, bg=COLORS["card"], bd=0, highlightthickness=0)
+        list_card.grid(row=0, column=0, sticky="nsew")
+        self._install_rounded_surface(
+            list_card,
+            fill=COLORS["card"],
+            border="#e2e8f0",
+            radius=20,
+            shadow=False,
+            cache_key=f"settings-list-{id(parent)}",
+        )
+        list_card.grid_rowconfigure(0, weight=1)
+        list_card.grid_columnconfigure(0, weight=1)
+        canvas = self.tk.Canvas(list_card, bg=COLORS["card"], bd=0, highlightthickness=0)
+        scrollbar = self.tk.Scrollbar(list_card, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.grid(row=0, column=0, sticky="nsew", padx=(2, 0), pady=2)
+        scrollbar.grid(row=0, column=1, sticky="ns", pady=18)
+        inner = self.tk.Frame(canvas, bg=COLORS["card"])
+        window_id = canvas.create_window((0, 0), window=inner, anchor="nw")
+        inner.grid_columnconfigure(0, weight=1)
+
+        def sync_scroll_region(_event: Any | None = None) -> None:
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def sync_inner_width(event: Any) -> None:
+            canvas.itemconfigure(window_id, width=event.width)
+
+        inner.bind("<Configure>", sync_scroll_region, add="+")
+        canvas.bind("<Configure>", sync_inner_width, add="+")
+
+        def on_mousewheel(event: Any) -> None:
+            canvas.yview_scroll(int(-event.delta / 120), "units")
+
+        def bind_scroll(_event: Any) -> None:
+            canvas.bind_all("<MouseWheel>", on_mousewheel, add="+")
+
+        def unbind_scroll(_event: Any) -> None:
+            try:
+                canvas.unbind_all("<MouseWheel>")
+            except Exception:
+                pass
+
+        list_card.bind("<Enter>", bind_scroll, add="+")
+        list_card.bind("<Leave>", unbind_scroll, add="+")
+        for row_index, name in enumerate(field_names):
+            row = self._build_setting_row(inner, FIELD_SPEC_BY_NAME[name])
+            row.grid(row=row_index, column=0, sticky="ew")
 
     def _build_advanced_settings_group(self, parent: Any, field_names: List[str]) -> None:
         parent.grid_columnconfigure(0, weight=1)
@@ -1775,7 +1925,7 @@ class DesktopApp:
                 icon.configure(image=image, bg=fill)
                 icon.image = image
             if active:
-                self.page_title_var.set(item.label)
+                self.page_title_var.set(PAGE_TITLES.get(item.key, item.label))
         for item in NAV_ITEMS:
             tab = self.page_tab_buttons.get(item.key)
             if tab is not None and hasattr(tab, "_set_button_variant"):
