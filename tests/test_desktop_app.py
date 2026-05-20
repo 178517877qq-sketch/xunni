@@ -206,6 +206,26 @@ class DesktopAppHelperTests(unittest.TestCase):
         self.assertEqual("#ffffff", desktop_app.BUTTON_VARIANTS["secondary"]["bg"])
         self.assertEqual("#dbeafe", desktop_app.BUTTON_VARIANTS["soft"]["bg"])
 
+    def test_top_toolbar_actions_match_manual_workflow(self):
+        self.assertEqual(
+            ["refresh_dashboard", "save_config", "open_output_folder"],
+            [action.key for action in desktop_app.APP_TOOLBAR_ACTIONS],
+        )
+        self.assertEqual(
+            ["刷新检查", "保存配置", "输出目录"],
+            [action.label for action in desktop_app.APP_TOOLBAR_ACTIONS],
+        )
+        self.assertEqual(
+            ["ghost", "secondary", "soft"],
+            [action.variant for action in desktop_app.APP_TOOLBAR_ACTIONS],
+        )
+
+    def test_split_setting_fields_for_columns_keeps_row_style_columns_balanced(self):
+        self.assertEqual(
+            [["A", "C", "E"], ["B", "D"]],
+            desktop_app.split_setting_fields_for_columns(["A", "B", "C", "D", "E"], columns=2),
+        )
+
     def test_build_workbench_status_cards_summarizes_runtime_state(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -220,6 +240,7 @@ class DesktopAppHelperTests(unittest.TestCase):
             )
 
         self.assertEqual(["VPN/代理提醒", "当前 ip.txt", "GitHub 上传"], [card.title for card in cards])
+        self.assertEqual(["VPN", "IP", "GH"], [card.icon for card in cards])
         self.assertEqual("检测到代理变量", cards[0].value)
         self.assertEqual("2", cards[1].value)
         self.assertEqual("50%", cards[1].detail)
