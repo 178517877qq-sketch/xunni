@@ -250,6 +250,8 @@ class DesktopAppHelperTests(unittest.TestCase):
         self.assertGreaterEqual(layout["card_radius"], 26)
         self.assertGreaterEqual(layout["main_task_height"], 220)
         self.assertGreaterEqual(layout["action_tile_height"], 92)
+        self.assertLessEqual(layout["action_text_wrap"], 160)
+        self.assertLessEqual(layout["action_hint_wrap"], 160)
         self.assertGreaterEqual(layout["setting_row_height"], 96)
         self.assertGreaterEqual(layout["setting_description_wrap"], 560)
 
@@ -301,6 +303,9 @@ class DesktopAppHelperTests(unittest.TestCase):
         self.assertTrue(theme["card_fill"].endswith("dd"))
         self.assertTrue(theme["panel_fill"].endswith("e8"))
         self.assertGreaterEqual(theme["surface_shadow_blur"], 16)
+        self.assertGreaterEqual(theme["surface_shadow_blur"], 24)
+        self.assertEqual((0, 8), theme["surface_shadow_offset"])
+        self.assertGreaterEqual(theme["surface_shadow_margin"], 8)
 
         background = desktop_app.render_cockpit_background(160, 90)
         self.assertEqual((160, 90), background.size)
@@ -322,6 +327,34 @@ class DesktopAppHelperTests(unittest.TestCase):
         self.assertLess(center_alpha, 255)
         self.assertLessEqual(surface.getpixel((0, 0))[3], 8)
 
+    def test_render_rounded_surface_can_inset_shadow_to_avoid_square_edges(self):
+        image = desktop_app.render_rounded_surface(
+            160,
+            90,
+            "#ffffffdd",
+            "#ffffffcc",
+            radius=28,
+            shadow=True,
+            shadow_alpha=30,
+            shadow_offset=(0, 8),
+            shadow_blur=24,
+            shadow_margin=12,
+        )
+        alpha = image.getchannel("A")
+        w, h = image.size
+        edge_alpha = []
+        for x in range(w):
+            edge_alpha.append(alpha.getpixel((x, 0)))
+            edge_alpha.append(alpha.getpixel((x, h - 1)))
+        for y in range(h):
+            edge_alpha.append(alpha.getpixel((0, y)))
+            edge_alpha.append(alpha.getpixel((w - 1, y)))
+
+        self.assertLessEqual(max(edge_alpha), 5)
+        self.assertLessEqual(image.getpixel((4, h // 2))[3], 5)
+        self.assertGreater(image.getpixel((18, h // 2))[3], 0)
+        self.assertGreater(image.getpixel((w // 2, h // 2))[3], 190)
+
     def test_workbench_layout_prioritizes_one_main_task_and_status_summary(self):
         self.assertEqual(
             ["main_task", "latest_result"],
@@ -341,6 +374,7 @@ class DesktopAppHelperTests(unittest.TestCase):
         self.assertGreaterEqual(structure["toolbar_height"], 62)
         self.assertLessEqual(structure["sidebar_rail_height"], 560)
         self.assertTrue(structure["sidebar_has_action_button"])
+        self.assertEqual(["shell"], structure["background_layers"])
 
     def test_render_badge_image_returns_square_rgba_asset(self):
         image = desktop_app.render_badge_image("RUN", "#2563eb")

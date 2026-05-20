@@ -9,10 +9,11 @@ import sys
 import threading
 import time
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping
 
-from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageFont, ImageTk
+from PIL import Image, ImageChops, ImageColor, ImageDraw, ImageFilter, ImageFont, ImageTk
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().with_name("config.json")
 MAIN_SCRIPT_PATH = Path(__file__).resolve().with_name("main.py")
@@ -113,6 +114,8 @@ COCKPIT_LAYOUT = {
     "chip_radius": 21,
     "main_task_height": 320,
     "action_tile_height": 96,
+    "action_text_wrap": 148,
+    "action_hint_wrap": 112,
     "compact_tool_height": 42,
     "setting_row_height": 100,
     "setting_description_wrap": 600,
@@ -129,9 +132,10 @@ COCKPIT_THEME = {
     "card_fill": "#ffffffdd",
     "card_border": "#ffffffcc",
     "card_radius": 26,
-    "surface_shadow_alpha": 26,
-    "surface_shadow_blur": 18,
-    "surface_shadow_offset": (0, 10),
+    "surface_shadow_alpha": 24,
+    "surface_shadow_blur": 26,
+    "surface_shadow_offset": (0, 8),
+    "surface_shadow_margin": 10,
 }
 
 PAGE_TAB_STYLE = {
@@ -170,6 +174,7 @@ COCKPIT_STRUCTURE = {
     "toolbar_height": 66,
     "sidebar_rail_height": 548,
     "sidebar_has_action_button": True,
+    "background_layers": ["shell"],
 }
 
 SETTINGS_FIELD_GROUPS: Dict[str, List[str]] = {
@@ -376,6 +381,27 @@ def _ease_out_cubic(t: float) -> float:
     return 1 - pow(1 - t, 3)
 
 
+@lru_cache(maxsize=128)
+def _edge_fade_mask(width: int, height: int, margin: int) -> Image.Image:
+    margin = max(0, int(margin))
+    if margin <= 0:
+        return Image.new("L", (width, height), 255)
+    margin = min(margin, max(1, (min(width, height) - 1) // 2))
+    mask = Image.new("L", (width, height), 255)
+    draw = ImageDraw.Draw(mask)
+    for inset in range(margin):
+        alpha = int(round(255 * inset / margin))
+        draw.rectangle(
+            [inset, inset, width - 1 - inset, height - 1 - inset],
+            outline=alpha,
+        )
+    draw.rectangle(
+        [margin, margin, width - 1 - margin, height - 1 - margin],
+        fill=255,
+    )
+    return mask
+
+
 def _load_badge_font(size: int) -> ImageFont.ImageFont:
     windir = Path(os.environ.get("WINDIR", r"C:\Windows"))
     candidates = [
@@ -473,27 +499,52 @@ def render_rounded_surface(
     shadow_alpha: int = 34,
     shadow_offset: tuple[int, int] = (4, 6),
     shadow_blur: int = 9,
+    shadow_margin: int = 0,
 ) -> Image.Image:
     width = max(2, int(width))
     height = max(2, int(height))
     image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    margin = max(0, int(shadow_margin)) if shadow else 0
+    margin = min(margin, max(0, (min(width, height) - 4) // 2))
+    rect = [1 + margin, 1 + margin, width - 2 - margin, height - 2 - margin]
+    rect_width = max(1, rect[2] - rect[0])
+    rect_height = max(1, rect[3] - rect[1])
+    surface_radius = max(1, min(int(radius), rect_width // 2, rect_height // 2))
 
     if shadow:
         shadow_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         shadow_draw = ImageDraw.Draw(shadow_layer)
         offset_x, offset_y = shadow_offset
+        if margin:
+            shadow_rect = [
+                rect[0] + offset_x,
+                rect[1] + offset_y,
+                rect[2] + offset_x,
+                rect[3] + offset_y,
+            ]
+        else:
+            shadow_rect = [
+                offset_x,
+                offset_y,
+                width - max(2, offset_x + 2),
+                height - max(2, offset_y + 1),
+            ]
         shadow_draw.rounded_rectangle(
-            [offset_x, offset_y, width - max(2, offset_x + 2), height - max(2, offset_y + 1)],
-            radius=max(1, radius),
+            shadow_rect,
+            radius=surface_radius,
             fill=(15, 23, 42, max(0, min(255, shadow_alpha))),
         )
         shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(max(1, shadow_blur)))
+        if margin:
+            shadow_alpha_layer = shadow_layer.getchannel("A")
+            shadow_alpha_layer = ImageChops.multiply(shadow_alpha_layer, _edge_fade_mask(width, height, margin))
+            shadow_layer.putalpha(shadow_alpha_layer)
         image = Image.alpha_composite(image, shadow_layer)
 
     draw = ImageDraw.Draw(image)
     draw.rounded_rectangle(
-        [1, 1, width - 2, height - 2],
-        radius=max(1, radius),
+        rect,
+        radius=surface_radius,
         fill=_color_to_rgba(fill),
         outline=_color_to_rgba(border),
         width=1,
@@ -1219,6 +1270,7 @@ class DesktopApp:
             border="#e2e8f0",
             radius=30,
             shadow=True,
+            shadow_margin=8,
             cache_key="sidebar-shell",
         )
 
@@ -1254,7 +1306,6 @@ class DesktopApp:
         main.grid(row=0, column=1, sticky="nsew", padx=(8, 30), pady=(COCKPIT_STRUCTURE["main_top_padding"], 24))
         main.grid_columnconfigure(0, weight=1)
         main.grid_rowconfigure(3, weight=1)
-        self._install_cockpit_background(main, "main")
 
         header = tk.Frame(main, bg=COLORS["bg"])
         header.grid(row=0, column=0, sticky="ew", pady=(0, 28))
@@ -1275,6 +1326,7 @@ class DesktopApp:
             border=COCKPIT_THEME["panel_border"],
             radius=29,
             shadow=True,
+            shadow_margin=8,
             cache_key="top-banner",
         )
         banner_inner = tk.Frame(banner, bg=COLORS["panel"])
@@ -1293,6 +1345,7 @@ class DesktopApp:
             border=COCKPIT_THEME["panel_border"],
             radius=29,
             shadow=True,
+            shadow_margin=8,
             cache_key="page-switcher",
         )
         page_tabs_inner = tk.Frame(page_switcher, bg=COLORS["panel"])
@@ -1330,6 +1383,7 @@ class DesktopApp:
             border=COCKPIT_THEME["panel_border"],
             radius=16,
             shadow=True,
+            shadow_margin=8,
             cache_key="cockpit-toolbar",
         )
         inner = tk.Frame(toolbar, bg=COLORS["panel"])
@@ -1377,6 +1431,7 @@ class DesktopApp:
             border=COCKPIT_THEME["card_border"],
             radius=COCKPIT_THEME["card_radius"],
             shadow=True,
+            shadow_margin=COCKPIT_THEME["surface_shadow_margin"],
             cache_key=f"card-{id(frame)}",
         )
         if title:
@@ -1392,6 +1447,7 @@ class DesktopApp:
         border: str,
         radius: int = 18,
         shadow: bool = True,
+        shadow_margin: int = 0,
         cache_key: str | None = None,
     ) -> None:
         background = widget.cget("bg") if hasattr(widget, "cget") else COLORS["bg"]
@@ -1406,6 +1462,7 @@ class DesktopApp:
         widget._surface_shadow_alpha = COCKPIT_THEME["surface_shadow_alpha"] if shadow else 0
         widget._surface_shadow_offset = COCKPIT_THEME["surface_shadow_offset"]
         widget._surface_shadow_blur = COCKPIT_THEME["surface_shadow_blur"]
+        widget._surface_shadow_margin = max(0, int(shadow_margin)) if shadow else 0
         widget._surface_cache_key = cache_key or f"surface-{id(widget)}"
 
         def redraw(_event: Any | None = None) -> None:
@@ -1423,6 +1480,7 @@ class DesktopApp:
                 shadow_alpha=getattr(widget, "_surface_shadow_alpha", 34),
                 shadow_offset=getattr(widget, "_surface_shadow_offset", (4, 6)),
                 shadow_blur=getattr(widget, "_surface_shadow_blur", 9),
+                shadow_margin=getattr(widget, "_surface_shadow_margin", 0),
             )
             cache_key_local = (
                 f"{widget._surface_cache_key}:{width}x{height}:"
@@ -1830,6 +1888,7 @@ class DesktopApp:
             border=base_border,
             radius=24,
             shadow=True,
+            shadow_margin=6,
             cache_key=f"action-{action.key}",
         )
         tile.grid_columnconfigure(1, weight=1)
@@ -1839,6 +1898,7 @@ class DesktopApp:
         tile._surface_shadow_alpha = 34 if action.key == "optimize_only" else 30
         tile._surface_shadow_offset = (4, 6)
         tile._surface_shadow_blur = 9
+        tile._surface_shadow_margin = 6
 
         badge = self._badge_photo(
             f"action-{action.key}",
@@ -1853,9 +1913,9 @@ class DesktopApp:
 
         text_stack = self.tk.Frame(tile, bg="#ffffff")
         text_stack.grid(row=0, column=1, sticky="ew", padx=(0, 16), pady=(16, 0))
-        title_label = self.tk.Label(text_stack, text=action.label, bg="#ffffff", fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold"), justify="left", anchor="w", wraplength=230)
+        title_label = self.tk.Label(text_stack, text=action.label, bg="#ffffff", fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold"), justify="left", anchor="w", wraplength=COCKPIT_LAYOUT["action_text_wrap"])
         title_label.pack(anchor="w")
-        hint_label = self.tk.Label(text_stack, text=action.hint, bg="#ffffff", fg=COLORS["muted"], font=("Microsoft YaHei UI", 9), justify="left", anchor="w", wraplength=240)
+        hint_label = self.tk.Label(text_stack, text=action.hint, bg="#ffffff", fg=COLORS["muted"], font=("Microsoft YaHei UI", 9), justify="left", anchor="w", wraplength=COCKPIT_LAYOUT["action_hint_wrap"])
         hint_label.pack(anchor="w", pady=(5, 0))
 
         hover_children = [icon, text_stack, title_label, hint_label]
@@ -1873,6 +1933,7 @@ class DesktopApp:
             tile._surface_shadow_alpha = shadow_alpha
             tile._surface_shadow_offset = shadow_offset
             tile._surface_shadow_blur = shadow_blur
+            tile._surface_shadow_margin = 6
             if hasattr(tile, "_surface_redraw"):
                 tile._surface_redraw()
             for child in hover_children:
@@ -1932,6 +1993,7 @@ class DesktopApp:
             border="#dfe8f3",
             radius=24,
             shadow=True,
+            shadow_margin=6,
             cache_key=f"status-chip-{title}-{id(chip)}",
         )
         badge = self._badge_photo(
@@ -2044,7 +2106,6 @@ class DesktopApp:
     def _build_workbench_page(self) -> None:
         page = self.tk.Frame(self.content_host, bg=COCKPIT_THEME["background_base"])
         page.grid(row=0, column=0, sticky="nsew")
-        self._install_cockpit_background(page, "workbench")
         page.grid_columnconfigure(0, weight=5)
         page.grid_columnconfigure(1, weight=3)
         page.grid_rowconfigure(0, weight=1)
@@ -2101,7 +2162,6 @@ class DesktopApp:
     def _build_results_page(self) -> None:
         page = self.tk.Frame(self.content_host, bg=COCKPIT_THEME["background_base"])
         page.grid(row=0, column=0, sticky="nsew")
-        self._install_cockpit_background(page, "results")
         page.grid_columnconfigure(0, weight=3)
         page.grid_columnconfigure(1, weight=2)
         page.grid_rowconfigure(1, weight=1)
@@ -2136,7 +2196,6 @@ class DesktopApp:
     def _build_settings_page(self) -> None:
         page = self.tk.Frame(self.content_host, bg=COCKPIT_THEME["background_base"])
         page.grid(row=0, column=0, sticky="nsew")
-        self._install_cockpit_background(page, "settings")
         page.grid_columnconfigure(0, weight=1)
         page.grid_rowconfigure(1, weight=1)
         self.page_frames["settings"] = page
@@ -2293,7 +2352,6 @@ class DesktopApp:
     def _build_logs_page(self) -> None:
         page = self.tk.Frame(self.content_host, bg=COCKPIT_THEME["background_base"])
         page.grid(row=0, column=0, sticky="nsew")
-        self._install_cockpit_background(page, "logs")
         page.grid_columnconfigure(0, weight=2)
         page.grid_columnconfigure(1, weight=1)
         page.grid_rowconfigure(0, weight=1)
