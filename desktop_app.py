@@ -72,6 +72,13 @@ NAV_ITEMS: List[NavItem] = [
     NavItem("logs", "日志/帮助", "Log"),
 ]
 
+NAV_ITEM_GLYPHS = {
+    "workbench": "Run",
+    "results": "IP",
+    "settings": "Set",
+    "logs": "Log",
+}
+
 APP_TOOLBAR_ACTIONS: List[ToolbarAction] = [
     ToolbarAction("refresh_dashboard", "刷新检查", "ghost"),
     ToolbarAction("save_config", "保存配置", "secondary"),
@@ -184,14 +191,15 @@ FIELD_SPECS: List[FieldSpec] = [
 FIELD_SPEC_BY_NAME = {spec.name: spec for spec in FIELD_SPECS}
 
 COLORS = {
-    "bg": "#edf6fb",
-    "sidebar": "#f8fbff",
-    "panel": "#f7fbff",
-    "soft_panel": "#f4f8fc",
+    "bg": "#f5f8fb",
+    "sidebar": "#ffffff",
+    "panel": "#ffffff",
+    "soft_panel": "#f7f9fc",
     "card": "#ffffff",
-    "border": "#d5dfec",
+    "border": "#d9e2ee",
     "text": "#0f172a",
     "muted": "#64748b",
+    "muted_light": "#94a3b8",
     "blue": "#2563eb",
     "blue_dark": "#1d4ed8",
     "blue_soft": "#dbeafe",
@@ -242,9 +250,11 @@ def render_badge_image(
     size: int = 40,
     background: str | None = None,
     border: str | None = None,
+    text_color: str | None = None,
 ) -> Image.Image:
     bg = background or accent_surface(accent)
     outline = border or "#d7e2f0"
+    foreground = text_color or accent
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
     draw.rounded_rectangle(
@@ -261,7 +271,46 @@ def render_badge_image(
     text_h = bbox[3] - bbox[1]
     x = (size - text_w) / 2 - bbox[0]
     y = (size - text_h) / 2 - bbox[1] - 1
-    draw.text((x, y), label, font=font, fill=_hex_to_rgb(accent))
+    draw.text((x, y), label, font=font, fill=_hex_to_rgb(foreground))
+    return image
+
+
+def render_logo_image(size: int = 44) -> Image.Image:
+    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    start = _hex_to_rgb(COLORS["blue"])
+    end = _hex_to_rgb("#0ea5a5")
+    radius = max(14, size // 3)
+    mask = Image.new("L", (size, size), 0)
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.rounded_rectangle([0, 0, size - 1, size - 1], radius=radius, fill=255)
+    gradient = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    gradient_pixels = gradient.load()
+    for y in range(size):
+        for x in range(size):
+            t = (x + y) / max(1, (size - 1) * 2)
+            color = tuple(int(start[i] * (1 - t) + end[i] * t) for i in range(3))
+            gradient_pixels[x, y] = (*color, 255)
+    image = Image.composite(gradient, image, mask)
+    highlight = Image.new("RGBA", (size, size), (255, 255, 255, 0))
+    highlight_draw = ImageDraw.Draw(highlight)
+    highlight_draw.rounded_rectangle(
+        [4, 4, size - 5, int(size * 0.55)],
+        radius=radius,
+        fill=(255, 255, 255, 26),
+    )
+    image = Image.alpha_composite(image, highlight)
+    font = _load_badge_font(max(13, int(size * 0.38)))
+    bbox = draw.textbbox((0, 0), "cf", font=font)
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
+    draw = ImageDraw.Draw(image)
+    draw.text(
+        ((size - text_w) / 2 - bbox[0], (size - text_h) / 2 - bbox[1] - 1),
+        "cf",
+        font=font,
+        fill=(255, 255, 255, 255),
+    )
     return image
 
 
@@ -270,7 +319,7 @@ def render_rounded_surface(
     height: int,
     fill: str,
     border: str,
-    radius: int = 18,
+    radius: int = 20,
     shadow: bool = True,
 ) -> Image.Image:
     width = max(2, int(width))
@@ -280,13 +329,13 @@ def render_rounded_surface(
     if shadow:
         shadow_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         shadow_draw = ImageDraw.Draw(shadow_layer)
-        shadow_alpha = 28
+        shadow_alpha = 34
         shadow_draw.rounded_rectangle(
-            [3, 4, width - 5, height - 4],
+            [4, 6, width - 6, height - 5],
             radius=max(1, radius),
             fill=(15, 23, 42, shadow_alpha),
         )
-        shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(7))
+        shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(9))
         image = Image.alpha_composite(image, shadow_layer)
 
     draw = ImageDraw.Draw(image)
@@ -890,55 +939,60 @@ class DesktopApp:
         shell.grid_columnconfigure(1, weight=1)
         shell.grid_rowconfigure(0, weight=1)
 
-        sidebar = tk.Frame(shell, bg=COLORS["bg"], width=112, highlightbackground=COLORS["border"], highlightthickness=0)
-        sidebar.grid(row=0, column=0, sticky="ns")
-        sidebar.grid_propagate(False)
+        sidebar_host = tk.Frame(shell, bg=COLORS["bg"], width=102)
+        sidebar_host.grid(row=0, column=0, sticky="ns")
+        sidebar_host.grid_propagate(False)
+
+        sidebar = tk.Frame(sidebar_host, bg=COLORS["bg"], width=68, height=610, highlightthickness=0)
+        sidebar.pack(expand=True, padx=(24, 10))
+        sidebar.pack_propagate(False)
         self._install_rounded_surface(
             sidebar,
             fill=COLORS["sidebar"],
-            border="#d8e1ec",
-            radius=24,
+            border="#e2e8f0",
+            radius=30,
             shadow=True,
             cache_key="sidebar-shell",
         )
 
-        tk.Label(sidebar, text="cfnb", bg=COLORS["sidebar"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 14, "bold")).pack(pady=(24, 14))
-        tk.Frame(sidebar, bg=COLORS["border"], height=1).pack(fill="x", padx=16, pady=(0, 16))
+        logo = ImageTk.PhotoImage(render_logo_image(44), master=self.root)
+        self.badge_images["app-logo"] = logo
+        logo_label = tk.Label(sidebar, image=logo, bg=COLORS["sidebar"], bd=0)
+        logo_label.image = logo
+        logo_label.pack(pady=(30, 28))
         for item in NAV_ITEMS:
-            nav_shell = tk.Frame(sidebar, bg=COLORS["bg"], height=76)
-            nav_shell.pack(fill="x", padx=12, pady=6)
+            nav_shell = tk.Frame(sidebar, bg=COLORS["sidebar"], width=44, height=44)
+            nav_shell.pack(padx=12, pady=10)
             nav_shell.pack_propagate(False)
             self._install_rounded_surface(
                 nav_shell,
-                fill="#f8fbff",
-                border="#d8e1ec",
+                fill=COLORS["sidebar"],
+                border=COLORS["sidebar"],
                 radius=18,
-                shadow=True,
+                shadow=False,
                 cache_key=f"nav-shell-{item.key}",
             )
-            nav_body = tk.Frame(nav_shell, bg="#f8fbff")
-            nav_body.pack(fill="both", expand=True, padx=4, pady=4)
-            nav_body.grid_columnconfigure(0, weight=1)
             badge = self._badge_photo(
                 f"nav-{item.key}-inactive",
-                item.short_label,
+                NAV_ITEM_GLYPHS[item.key],
                 COLORS["muted"],
-                size=34,
-                background="#eef3f8",
+                size=28,
+                background=COLORS["sidebar"],
+                border=COLORS["sidebar"],
             )
-            icon = tk.Label(nav_body, image=badge, bg="#f8fbff")
+            icon = tk.Label(nav_shell, image=badge, bg=COLORS["sidebar"], bd=0)
             icon.image = badge
-            icon.grid(row=0, column=0, sticky="n", pady=(10, 0))
+            icon.pack(expand=True)
             nav_shell._nav_icon = icon
             nav_shell._nav_item = item
             self._bind_click_recursive(nav_shell, lambda key=item.key: self._show_page(key))
             self.nav_buttons[item.key] = nav_shell
             self.nav_labels[item.key] = None
 
-        tk.Label(sidebar, text="手动", bg=COLORS["sidebar"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(side="bottom", pady=(0, 18))
+        tk.Label(sidebar, text="手动", bg=COLORS["sidebar"], fg=COLORS["muted_light"], font=("Microsoft YaHei UI", 9)).pack(side="bottom", pady=(0, 24))
 
         main = tk.Frame(shell, bg=COLORS["bg"])
-        main.grid(row=0, column=1, sticky="nsew", padx=26, pady=22)
+        main.grid(row=0, column=1, sticky="nsew", padx=(8, 30), pady=22)
         main.grid_columnconfigure(0, weight=1)
         main.grid_rowconfigure(1, weight=1)
 
@@ -952,20 +1006,21 @@ class DesktopApp:
         tk.Label(title_stack, textvariable=self.page_title_var, bg=COLORS["bg"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 19, "bold")).pack(anchor="w")
         tk.Label(title_stack, textvariable=self.status_var, bg=COLORS["bg"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(anchor="w", pady=(5, 0))
 
-        banner = tk.Frame(header, bg=COLORS["panel"], highlightbackground=COLORS["border"], highlightthickness=1)
-        banner.grid(row=0, column=1, sticky="ew", padx=(22, 16))
+        banner = tk.Frame(header, bg=COLORS["bg"], width=374, height=58, highlightthickness=0)
+        banner.grid(row=0, column=1, padx=(22, 16))
+        banner.grid_propagate(False)
         self._install_rounded_surface(
             banner,
             fill=COLORS["panel"],
             border="#d8e1ec",
-            radius=18,
+            radius=29,
             shadow=True,
             cache_key="top-banner",
         )
         banner.grid_columnconfigure(1, weight=1)
-        tk.Label(banner, text="提示", bg=COLORS["blue_soft"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 8, "bold"), padx=10, pady=4).grid(row=0, column=0, padx=(14, 12), pady=10, sticky="w")
+        tk.Label(banner, text="提示", bg=COLORS["blue_soft"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 8, "bold"), padx=10, pady=5).grid(row=0, column=0, padx=(14, 10), pady=9, sticky="w")
         tk.Label(banner, textvariable=self.banner_text_var, bg=COLORS["panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).grid(row=0, column=1, sticky="w")
-        self._primary_button(banner, "测试代理", self._start_proxy_test, variant="soft").grid(row=0, column=2, padx=12, pady=8, sticky="e")
+        self._primary_button(banner, "测试代理", self._start_proxy_test, variant="soft").grid(row=0, column=2, padx=(8, 12), pady=9, sticky="e")
 
         toolbar = tk.Frame(header, bg=COLORS["bg"])
         toolbar.grid(row=0, column=2, sticky="e")
@@ -1002,7 +1057,7 @@ class DesktopApp:
             frame,
             fill=COLORS["card"],
             border="#d8e1ec",
-            radius=18,
+            radius=20,
             shadow=True,
             cache_key=f"card-{id(frame)}",
         )
@@ -1045,7 +1100,11 @@ class DesktopApp:
                 radius=widget._surface_radius,
                 shadow=widget._surface_shadow,
             )
-            cache_key_local = f"{widget._surface_cache_key}:{width}x{height}:{fill}:{border}:{radius}:{shadow}"
+            cache_key_local = (
+                f"{widget._surface_cache_key}:{width}x{height}:"
+                f"{widget._surface_fill}:{widget._surface_border}:"
+                f"{widget._surface_radius}:{widget._surface_shadow}"
+            )
             photo = ImageTk.PhotoImage(image, master=self.root)
             self.surface_images[cache_key_local] = photo
             bg_label.configure(image=photo)
@@ -1063,9 +1122,10 @@ class DesktopApp:
         size: int = 40,
         background: str | None = None,
         border: str | None = None,
+        text_color: str | None = None,
     ) -> Any:
         if cache_key not in self.badge_images:
-            image = render_badge_image(label, accent, size=size, background=background, border=border)
+            image = render_badge_image(label, accent, size=size, background=background, border=border, text_color=text_color)
             self.badge_images[cache_key] = ImageTk.PhotoImage(image, master=self.root)
         return self.badge_images[cache_key]
 
@@ -1080,14 +1140,14 @@ class DesktopApp:
     ) -> Any:
         frame = self._card(parent)
         body = self.tk.Frame(frame, bg=COLORS["card"])
-        body.pack(fill="x", padx=12, pady=12)
+        body.pack(fill="x", padx=14, pady=14)
         body.grid_columnconfigure(1, weight=1)
 
         badge = self._badge_photo(
             f"metric-{title}-{icon}",
             icon or title[:2],
             accent,
-            size=40,
+            size=44,
             background=accent_surface(accent),
         )
         icon_label = self.tk.Label(body, image=badge, bg=COLORS["card"])
@@ -1097,10 +1157,10 @@ class DesktopApp:
         text_stack = self.tk.Frame(body, bg=COLORS["card"])
         text_stack.grid(row=0, column=1, sticky="ew")
         self.tk.Label(text_stack, text=title, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).pack(anchor="w")
-        value_label = self.tk.Label(text_stack, textvariable=variable, bg=COLORS["card"], fg=accent, font=("Microsoft YaHei UI", 20, "bold"))
+        value_label = self.tk.Label(text_stack, textvariable=variable, bg=COLORS["card"], fg=accent, font=("Microsoft YaHei UI", 19, "bold"))
         value_label.pack(anchor="w", pady=(2, 0))
         if detail_variable is not None:
-            self.tk.Label(text_stack, textvariable=detail_variable, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9), justify="left", anchor="w", wraplength=140).pack(anchor="w", pady=(0, 0))
+            self.tk.Label(text_stack, textvariable=detail_variable, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9), justify="left", anchor="w", wraplength=150).pack(anchor="w", pady=(0, 0))
         frame.value_label = value_label
         return frame
 
@@ -1113,24 +1173,55 @@ class DesktopApp:
         variant: str | None = None,
     ) -> Any:
         chosen_variant = variant or ("primary" if primary else "secondary")
-        style = BUTTON_VARIANTS[chosen_variant]
-        return self.tk.Button(
+        width = max(58, len(text) * 14 + 30)
+        height = 38
+        parent_bg = parent.cget("bg") if hasattr(parent, "cget") else COLORS["bg"]
+        button = self.tk.Canvas(
             parent,
-            text=text,
-            command=command,
-            bg=style["bg"],
-            fg=style["fg"],
-            activebackground=style["activebackground"],
-            activeforeground=style["activeforeground"],
-            relief="flat",
+            width=width,
+            height=height,
+            bg=parent_bg,
             bd=0,
-            highlightbackground=style["border"],
-            highlightthickness=1,
-            padx=14,
-            pady=10,
-            font=("Microsoft YaHei UI", 10, "bold"),
+            highlightthickness=0,
             cursor="hand2",
         )
+
+        def draw_button(next_variant: str, hover: bool = False) -> None:
+            style = BUTTON_VARIANTS[next_variant]
+            fill = style["activebackground"] if hover else style["bg"]
+            fg = style["activeforeground"] if hover else style["fg"]
+            image = render_rounded_surface(
+                width,
+                height,
+                fill,
+                style["border"],
+                radius=height // 2,
+                shadow=next_variant in {"primary", "secondary"},
+            )
+            photo_key = f"button-{id(button)}:{next_variant}:{hover}"
+            photo = ImageTk.PhotoImage(image, master=self.root)
+            self.surface_images[photo_key] = photo
+            button.delete("all")
+            button.create_image(0, 0, image=photo, anchor="nw")
+            button.create_text(
+                width // 2,
+                height // 2,
+                text=text,
+                fill=fg,
+                font=("Microsoft YaHei UI", 10, "bold"),
+            )
+            button.image = photo
+
+        def set_variant(next_variant: str) -> None:
+            button._button_variant = next_variant
+            draw_button(next_variant, hover=False)
+
+        button._set_button_variant = set_variant
+        set_variant(chosen_variant)
+        button.bind("<Button-1>", lambda _event, cb=command: cb())
+        button.bind("<Enter>", lambda _event: draw_button(getattr(button, "_button_variant", chosen_variant), hover=True), add="+")
+        button.bind("<Leave>", lambda _event: draw_button(getattr(button, "_button_variant", chosen_variant), hover=False), add="+")
+        return button
 
     def _bind_click_recursive(self, widget: Any, command: Callable[[], None]) -> None:
         widget.configure(cursor="hand2")
@@ -1148,10 +1239,10 @@ class DesktopApp:
         )
         self._install_rounded_surface(
             tile,
-            fill=COLORS["soft_panel"],
-            border="#d8e2ee",
-            radius=16,
-            shadow=False,
+            fill="#ffffff",
+            border="#e1e8f2",
+            radius=18,
+            shadow=True,
             cache_key=f"action-{action.key}",
         )
         tile.grid_columnconfigure(1, weight=1)
@@ -1164,14 +1255,14 @@ class DesktopApp:
             size=42,
             background=accent_surface(action.accent),
         )
-        icon = self.tk.Label(tile, image=badge, bg=COLORS["soft_panel"])
+        icon = self.tk.Label(tile, image=badge, bg="#ffffff")
         icon.image = badge
         icon.grid(row=0, column=0, rowspan=2, sticky="nw", padx=12, pady=12)
 
-        text_stack = self.tk.Frame(tile, bg=COLORS["soft_panel"])
+        text_stack = self.tk.Frame(tile, bg="#ffffff")
         text_stack.grid(row=0, column=1, sticky="ew", padx=(0, 12), pady=(12, 0))
-        self.tk.Label(text_stack, text=action.label, bg=COLORS["soft_panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 9, "bold"), justify="left", anchor="w", wraplength=110).pack(anchor="w")
-        self.tk.Label(text_stack, text=action.hint, bg=COLORS["soft_panel"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 8), justify="left", anchor="w", wraplength=110).pack(anchor="w", pady=(3, 0))
+        self.tk.Label(text_stack, text=action.label, bg="#ffffff", fg=COLORS["text"], font=("Microsoft YaHei UI", 9, "bold"), justify="left", anchor="w", wraplength=110).pack(anchor="w")
+        self.tk.Label(text_stack, text=action.hint, bg="#ffffff", fg=COLORS["muted"], font=("Microsoft YaHei UI", 8), justify="left", anchor="w", wraplength=110).pack(anchor="w", pady=(3, 0))
 
         self._bind_click_recursive(tile, command)
         return tile
@@ -1207,7 +1298,7 @@ class DesktopApp:
         left.grid_rowconfigure(2, weight=1)
         left.grid_columnconfigure(0, weight=1)
 
-        action_card = self._card(left, "快捷操作", "像 cockpit 一样把常用动作收进一块，少读字，多点一下。")
+        action_card = self._card(left, "快捷操作", "断 VPN 后优选，连代理后上传。")
         action_card.grid(row=0, column=0, sticky="ew", pady=(0, 14))
         actions = self.tk.Frame(action_card, bg=COLORS["card"])
         actions.pack(fill="x", padx=12, pady=(6, 14))
@@ -1493,20 +1584,28 @@ class DesktopApp:
         for item in NAV_ITEMS:
             button = self.nav_buttons[item.key]
             active = item.key == key
-            button._surface_fill = "#ecf3ff" if active else "#f8fbff"
-            button._surface_border = "#c8d8ef" if active else "#d8e1ec"
+            fill = COLORS["blue_dark"] if active else COLORS["sidebar"]
+            border = COLORS["blue_dark"] if active else COLORS["sidebar"]
+            button._surface_fill = fill
+            button._surface_border = border
+            button._surface_shadow = bool(active)
             if hasattr(button, "_surface_redraw"):
                 button._surface_redraw()
+            body = getattr(button, "_nav_body", None)
+            if body is not None:
+                body.configure(bg=fill)
             icon = getattr(button, "_nav_icon", None)
             if icon is not None:
                 image = self._badge_photo(
                     f"nav-{item.key}-{'active' if active else 'inactive'}",
-                    item.short_label,
-                    COLORS["blue_dark"] if active else COLORS["muted"],
-                    size=34,
-                    background=accent_surface(COLORS["blue_dark"] if active else COLORS["muted"]),
+                    NAV_ITEM_GLYPHS[item.key],
+                    "#ffffff" if active else COLORS["muted"],
+                    size=28,
+                    background=fill,
+                    border=fill,
+                    text_color="#ffffff" if active else COLORS["muted"],
                 )
-                icon.configure(image=image, bg="#f8fbff")
+                icon.configure(image=image, bg=fill)
                 icon.image = image
             if active:
                 self.page_title_var.set(item.label)
@@ -1522,14 +1621,18 @@ class DesktopApp:
                 frame.tkraise()
         for name, button in self.settings_buttons.items():
             active = name == group
-            style = BUTTON_VARIANTS["soft" if active else "secondary"]
-            button.configure(
-                bg=style["bg"],
-                fg=style["fg"],
-                activebackground=style["activebackground"],
-                activeforeground=style["activeforeground"],
-                highlightbackground=style["border"],
-            )
+            variant = "soft" if active else "secondary"
+            if hasattr(button, "_set_button_variant"):
+                button._set_button_variant(variant)
+            else:
+                style = BUTTON_VARIANTS[variant]
+                button.configure(
+                    bg=style["bg"],
+                    fg=style["fg"],
+                    activebackground=style["activebackground"],
+                    activeforeground=style["activeforeground"],
+                    highlightbackground=style["border"],
+                )
 
     def _browse_config(self) -> None:
         path = self.filedialog.askopenfilename(
