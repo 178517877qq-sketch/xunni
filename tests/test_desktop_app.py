@@ -236,6 +236,13 @@ class DesktopAppHelperTests(unittest.TestCase):
         self.assertEqual((40, 40), image.size)
         self.assertEqual("RGBA", image.mode)
 
+    def test_render_rounded_surface_keeps_corners_transparent(self):
+        image = desktop_app.render_rounded_surface(80, 50, "#ffffff", "#d8e1ec")
+
+        self.assertEqual((80, 50), image.size)
+        self.assertLessEqual(image.getpixel((0, 0))[3], 5)
+        self.assertGreater(image.getpixel((40, 25))[3], 0)
+
     def test_split_setting_fields_for_columns_keeps_row_style_columns_balanced(self):
         self.assertEqual(
             [["A", "C", "E"], ["B", "D"]],

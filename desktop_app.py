@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping
 
-from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageTk
+from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageFont, ImageTk
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().with_name("config.json")
 MAIN_SCRIPT_PATH = Path(__file__).resolve().with_name("main.py")
@@ -262,6 +262,41 @@ def render_badge_image(
     x = (size - text_w) / 2 - bbox[0]
     y = (size - text_h) / 2 - bbox[1] - 1
     draw.text((x, y), label, font=font, fill=_hex_to_rgb(accent))
+    return image
+
+
+def render_rounded_surface(
+    width: int,
+    height: int,
+    fill: str,
+    border: str,
+    radius: int = 18,
+    shadow: bool = True,
+) -> Image.Image:
+    width = max(2, int(width))
+    height = max(2, int(height))
+    image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+
+    if shadow:
+        shadow_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        shadow_draw = ImageDraw.Draw(shadow_layer)
+        shadow_alpha = 28
+        shadow_draw.rounded_rectangle(
+            [3, 4, width - 5, height - 4],
+            radius=max(1, radius),
+            fill=(15, 23, 42, shadow_alpha),
+        )
+        shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(7))
+        image = Image.alpha_composite(image, shadow_layer)
+
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle(
+        [1, 1, width - 2, height - 2],
+        radius=max(1, radius),
+        fill=_hex_to_rgb(fill),
+        outline=_hex_to_rgb(border),
+        width=1,
+    )
     return image
 
 
@@ -801,9 +836,9 @@ class DesktopApp:
         self.result_detail_var = tk.StringVar(value="443 优先输出")
         self.github_detail_var = tk.StringVar(value="上传阶段可单独走代理")
         self.backup_count_var = tk.StringVar(value="0")
-        self.backup_detail_var = tk.StringVar(value="保留最近 20 份")
+        self.backup_detail_var = tk.StringVar(value="保留 20 份")
         self.output_file_var = tk.StringVar(value="")
-        self.banner_text_var = tk.StringVar(value="优选前先断开 VPN，上传阶段再单独走代理。")
+        self.banner_text_var = tk.StringVar(value="测速前断 VPN，上传再开代理。")
         self.status_accent_vars: Dict[str, Any] = {}
 
         self.config_data: Dict[str, Any] = {}
@@ -813,6 +848,7 @@ class DesktopApp:
         self.nav_labels: Dict[str, Any] = {}
         self.toolbar_buttons: Dict[str, Any] = {}
         self.badge_images: Dict[str, Any] = {}
+        self.surface_images: Dict[str, Any] = {}
         self.settings_frames: Dict[str, Any] = {}
         self.settings_buttons: Dict[str, Any] = {}
         self.active_page = "workbench"
@@ -854,44 +890,53 @@ class DesktopApp:
         shell.grid_columnconfigure(1, weight=1)
         shell.grid_rowconfigure(0, weight=1)
 
-        sidebar = tk.Frame(shell, bg=COLORS["sidebar"], width=112, highlightbackground=COLORS["border"], highlightthickness=1)
+        sidebar = tk.Frame(shell, bg=COLORS["bg"], width=112, highlightbackground=COLORS["border"], highlightthickness=0)
         sidebar.grid(row=0, column=0, sticky="ns")
         sidebar.grid_propagate(False)
+        self._install_rounded_surface(
+            sidebar,
+            fill=COLORS["sidebar"],
+            border="#d8e1ec",
+            radius=24,
+            shadow=True,
+            cache_key="sidebar-shell",
+        )
 
         tk.Label(sidebar, text="cfnb", bg=COLORS["sidebar"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 14, "bold")).pack(pady=(24, 14))
         tk.Frame(sidebar, bg=COLORS["border"], height=1).pack(fill="x", padx=16, pady=(0, 16))
         for item in NAV_ITEMS:
-            button = tk.Button(
-                sidebar,
-                text=item.label,
-                image=self._badge_photo(
-                    f"nav-{item.key}-inactive",
-                    item.short_label,
-                    COLORS["muted"],
-                    size=36,
-                    background="#eef3f8",
-                ),
-                command=lambda key=item.key: self._show_page(key),
-                relief="flat",
-                bd=0,
-                width=86,
-                height=74,
-                font=("Microsoft YaHei UI", 8, "bold"),
-                cursor="hand2",
-                compound="top",
-                justify="center",
-                wraplength=70,
-                bg="#f8fbff",
-                fg=COLORS["text"],
-                activebackground=COLORS["blue_soft"],
-                activeforeground=COLORS["blue_dark"],
-                highlightbackground=COLORS["border"],
-                highlightthickness=1,
-                padx=4,
-                pady=4,
+            nav_shell = tk.Frame(sidebar, bg=COLORS["bg"], height=76)
+            nav_shell.pack(fill="x", padx=12, pady=6)
+            nav_shell.pack_propagate(False)
+            self._install_rounded_surface(
+                nav_shell,
+                fill="#f8fbff",
+                border="#d8e1ec",
+                radius=18,
+                shadow=True,
+                cache_key=f"nav-shell-{item.key}",
             )
-            button.pack(fill="x", padx=12, pady=6)
-            self.nav_buttons[item.key] = button
+            nav_body = tk.Frame(nav_shell, bg="#f8fbff")
+            nav_body.pack(fill="both", expand=True, padx=4, pady=4)
+            nav_body.grid_columnconfigure(0, weight=1)
+            badge = self._badge_photo(
+                f"nav-{item.key}-inactive",
+                item.short_label,
+                COLORS["muted"],
+                size=34,
+                background="#eef3f8",
+            )
+            icon = tk.Label(nav_body, image=badge, bg="#f8fbff")
+            icon.image = badge
+            icon.grid(row=0, column=0, pady=(2, 3))
+            label = tk.Label(nav_body, text=item.label, bg="#f8fbff", fg=COLORS["muted"], font=("Microsoft YaHei UI", 8, "bold"))
+            label.grid(row=1, column=0, pady=(0, 3))
+            nav_shell._nav_icon = icon
+            nav_shell._nav_label = label
+            nav_shell._nav_item = item
+            self._bind_click_recursive(nav_shell, lambda key=item.key: self._show_page(key))
+            self.nav_buttons[item.key] = nav_shell
+            self.nav_labels[item.key] = label
 
         tk.Label(sidebar, text="手动", bg=COLORS["sidebar"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(side="bottom", pady=(0, 18))
 
@@ -912,6 +957,14 @@ class DesktopApp:
 
         banner = tk.Frame(header, bg=COLORS["panel"], highlightbackground=COLORS["border"], highlightthickness=1)
         banner.grid(row=0, column=1, sticky="ew", padx=(22, 16))
+        self._install_rounded_surface(
+            banner,
+            fill=COLORS["panel"],
+            border="#d8e1ec",
+            radius=18,
+            shadow=True,
+            cache_key="top-banner",
+        )
         banner.grid_columnconfigure(1, weight=1)
         tk.Label(banner, text="提示", bg=COLORS["blue_soft"], fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 8, "bold"), padx=10, pady=4).grid(row=0, column=0, padx=(14, 12), pady=10, sticky="w")
         tk.Label(banner, textvariable=self.banner_text_var, bg=COLORS["panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).grid(row=0, column=1, sticky="w")
@@ -943,16 +996,67 @@ class DesktopApp:
     def _card(self, parent: Any, title: str | None = None, subtitle: str | None = None, padding: int = 14) -> Any:
         frame = self.tk.Frame(
             parent,
-            bg=COLORS["card"],
+            bg=parent.cget("bg") if hasattr(parent, "cget") else COLORS["bg"],
             highlightbackground=COLORS["border"],
-            highlightthickness=1,
+            highlightthickness=0,
             bd=0,
+        )
+        self._install_rounded_surface(
+            frame,
+            fill=COLORS["card"],
+            border="#d8e1ec",
+            radius=18,
+            shadow=True,
+            cache_key=f"card-{id(frame)}",
         )
         if title:
             self.tk.Label(frame, text=title, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 11, "bold")).pack(anchor="w", padx=padding, pady=(padding, 4))
         if subtitle:
-            self.tk.Label(frame, text=subtitle, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(anchor="w", padx=padding, pady=(0, 4))
+            self.tk.Label(frame, text=subtitle, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9), justify="left", anchor="w", wraplength=520).pack(anchor="w", padx=padding, pady=(0, 4))
         return frame
+
+    def _install_rounded_surface(
+        self,
+        widget: Any,
+        fill: str,
+        border: str,
+        radius: int = 18,
+        shadow: bool = True,
+        cache_key: str | None = None,
+    ) -> None:
+        background = widget.cget("bg") if hasattr(widget, "cget") else COLORS["bg"]
+        bg_label = self.tk.Label(widget, bg=background, bd=0, highlightthickness=0)
+        bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+        bg_label.lower()
+        widget._surface_bg_label = bg_label
+        widget._surface_fill = fill
+        widget._surface_border = border
+        widget._surface_radius = radius
+        widget._surface_shadow = shadow
+        widget._surface_cache_key = cache_key or f"surface-{id(widget)}"
+
+        def redraw(_event: Any | None = None) -> None:
+            width = max(2, widget.winfo_width())
+            height = max(2, widget.winfo_height())
+            if width < 4 or height < 4:
+                return
+            image = render_rounded_surface(
+                width,
+                height,
+                widget._surface_fill,
+                widget._surface_border,
+                radius=widget._surface_radius,
+                shadow=widget._surface_shadow,
+            )
+            cache_key_local = f"{widget._surface_cache_key}:{width}x{height}:{fill}:{border}:{radius}:{shadow}"
+            photo = ImageTk.PhotoImage(image, master=self.root)
+            self.surface_images[cache_key_local] = photo
+            bg_label.configure(image=photo)
+            bg_label.image = photo
+
+        widget._surface_redraw = redraw
+        widget.bind("<Configure>", redraw, add="+")
+        redraw()
 
     def _badge_photo(
         self,
@@ -999,7 +1103,7 @@ class DesktopApp:
         value_label = self.tk.Label(text_stack, textvariable=variable, bg=COLORS["card"], fg=accent, font=("Microsoft YaHei UI", 20, "bold"))
         value_label.pack(anchor="w", pady=(2, 0))
         if detail_variable is not None:
-            self.tk.Label(text_stack, textvariable=detail_variable, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(anchor="w", pady=(0, 0))
+            self.tk.Label(text_stack, textvariable=detail_variable, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9), justify="left", anchor="w", wraplength=140).pack(anchor="w", pady=(0, 0))
         frame.value_label = value_label
         return frame
 
@@ -1040,10 +1144,18 @@ class DesktopApp:
     def _build_action_tile(self, parent: Any, action: WorkbenchAction, command: Callable[[], None]) -> Any:
         tile = self.tk.Frame(
             parent,
-            bg=COLORS["soft_panel"],
+            bg=parent.cget("bg") if hasattr(parent, "cget") else COLORS["card"],
             highlightbackground="#d8e2ee",
-            highlightthickness=1,
+            highlightthickness=0,
             bd=0,
+        )
+        self._install_rounded_surface(
+            tile,
+            fill=COLORS["soft_panel"],
+            border="#d8e2ee",
+            radius=16,
+            shadow=False,
+            cache_key=f"action-{action.key}",
         )
         tile.grid_columnconfigure(1, weight=1)
         tile.grid_rowconfigure(0, weight=1)
@@ -1061,8 +1173,8 @@ class DesktopApp:
 
         text_stack = self.tk.Frame(tile, bg=COLORS["soft_panel"])
         text_stack.grid(row=0, column=1, sticky="ew", padx=(0, 12), pady=(12, 0))
-        self.tk.Label(text_stack, text=action.label, bg=COLORS["soft_panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).pack(anchor="w")
-        self.tk.Label(text_stack, text=action.hint, bg=COLORS["soft_panel"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 8)).pack(anchor="w", pady=(3, 0))
+        self.tk.Label(text_stack, text=action.label, bg=COLORS["soft_panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 9, "bold"), justify="left", anchor="w", wraplength=110).pack(anchor="w")
+        self.tk.Label(text_stack, text=action.hint, bg=COLORS["soft_panel"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 8), justify="left", anchor="w", wraplength=110).pack(anchor="w", pady=(3, 0))
 
         self._bind_click_recursive(tile, command)
         return tile
@@ -1201,6 +1313,14 @@ class DesktopApp:
         tabs_host.grid_columnconfigure(2, weight=1)
         tabs = self.tk.Frame(tabs_host, bg=COLORS["card"])
         tabs.grid(row=0, column=1)
+        self._install_rounded_surface(
+            tabs,
+            fill="#f6f9fd",
+            border="#d8e2ee",
+            radius=16,
+            shadow=False,
+            cache_key="settings-tabs",
+        )
         for group in SETTINGS_FIELD_GROUPS:
             button = self._primary_button(
                 tabs,
@@ -1208,7 +1328,7 @@ class DesktopApp:
                 lambda name=group: self._show_settings_group(name),
                 variant="soft" if group == self.active_settings_group else "secondary",
             )
-            button.pack(side="left", padx=(0, 8))
+            button.pack(side="left", padx=(0, 6), pady=2)
             self.settings_buttons[group] = button
 
         settings_host = self.tk.Frame(body, bg=COLORS["card"])
@@ -1228,16 +1348,24 @@ class DesktopApp:
     def _build_setting_row(self, parent: Any, spec: FieldSpec) -> Any:
         row = self.tk.Frame(
             parent,
-            bg=COLORS["soft_panel"],
+            bg=parent.cget("bg") if hasattr(parent, "cget") else COLORS["card"],
             highlightbackground=COLORS["border"],
-            highlightthickness=1,
+            highlightthickness=0,
             bd=0,
+        )
+        self._install_rounded_surface(
+            row,
+            fill=COLORS["soft_panel"],
+            border="#d8e2ee",
+            radius=14,
+            shadow=False,
+            cache_key=f"setting-row-{spec.name}",
         )
         row.grid_columnconfigure(0, weight=1)
         label_stack = self.tk.Frame(row, bg=COLORS["soft_panel"])
         label_stack.grid(row=0, column=0, sticky="ew", padx=12, pady=10)
-        self.tk.Label(label_stack, text=spec.label, bg=COLORS["soft_panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).pack(anchor="w")
-        self.tk.Label(label_stack, text=spec.name, bg=COLORS["soft_panel"], fg=COLORS["muted"], font=("Consolas", 8)).pack(anchor="w", pady=(3, 0))
+        self.tk.Label(label_stack, text=spec.label, bg=COLORS["soft_panel"], fg=COLORS["text"], font=("Microsoft YaHei UI", 9, "bold"), justify="left", anchor="w", wraplength=180).pack(anchor="w")
+        self.tk.Label(label_stack, text=spec.name, bg=COLORS["soft_panel"], fg=COLORS["muted"], font=("Consolas", 8), justify="left", anchor="w", wraplength=180).pack(anchor="w", pady=(3, 0))
 
         if spec.kind == "bool":
             var = self.tk.BooleanVar(value=False)
@@ -1248,6 +1376,7 @@ class DesktopApp:
                 activebackground=COLORS["soft_panel"],
                 relief="flat",
                 selectcolor=COLORS["card"],
+                bd=0,
             )
             widget.grid(row=0, column=1, sticky="e", padx=(8, 12), pady=10)
         else:
@@ -1259,7 +1388,7 @@ class DesktopApp:
                 bg=COLORS["card"],
                 highlightthickness=1,
                 highlightbackground=COLORS["border"],
-                width=24,
+                width=26,
             )
             widget.grid(row=0, column=1, sticky="ew", padx=(8, 12), pady=10, ipady=5)
         self.form_vars[spec.name] = var
@@ -1367,21 +1496,24 @@ class DesktopApp:
         for item in NAV_ITEMS:
             button = self.nav_buttons[item.key]
             active = item.key == key
-            image = self._badge_photo(
-                f"nav-{item.key}-{'active' if active else 'inactive'}",
-                item.short_label,
-                COLORS["blue_dark"] if active else COLORS["muted"],
-                size=36,
-                background=accent_surface(COLORS["blue_dark"] if active else COLORS["muted"]),
-            )
-            button.configure(
-                image=image,
-                bg="#eaf2ff" if active else "#f8fbff",
-                fg=COLORS["blue_dark"] if active else COLORS["text"],
-                activebackground="#dbeafe" if active else "#eef3f8",
-                activeforeground=COLORS["blue_dark"] if active else COLORS["text"],
-            )
-            button.image = image
+            button._surface_fill = "#ecf3ff" if active else "#f8fbff"
+            button._surface_border = "#c8d8ef" if active else "#d8e1ec"
+            if hasattr(button, "_surface_redraw"):
+                button._surface_redraw()
+            icon = getattr(button, "_nav_icon", None)
+            label = getattr(button, "_nav_label", None)
+            if icon is not None:
+                image = self._badge_photo(
+                    f"nav-{item.key}-{'active' if active else 'inactive'}",
+                    item.short_label,
+                    COLORS["blue_dark"] if active else COLORS["muted"],
+                    size=34,
+                    background=accent_surface(COLORS["blue_dark"] if active else COLORS["muted"]),
+                )
+                icon.configure(image=image, bg="#f8fbff")
+                icon.image = image
+            if label is not None:
+                label.configure(fg=COLORS["blue_dark"] if active else COLORS["muted"], bg="#f8fbff")
             if active:
                 self.page_title_var.set(item.label)
         if key in {"workbench", "results"}:
@@ -1636,7 +1768,7 @@ class DesktopApp:
             self.output_updated_var.set("未生成")
         keep = int(self.config_data.get("OUTPUT_BACKUP_KEEP", 20) or 20)
         backup_dir = resolve_backup_dir(config_path, self.config_data)
-        self.backup_detail_var.set(f"{backup_dir.name} · 保留最近 {keep} 份")
+        self.backup_detail_var.set(f"{backup_dir.name} · 保留 {keep} 份")
         self._refresh_backups()
 
     def _refresh_backups(self) -> None:
