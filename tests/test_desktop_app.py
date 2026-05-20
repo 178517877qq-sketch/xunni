@@ -253,6 +253,24 @@ class DesktopAppHelperTests(unittest.TestCase):
         self.assertGreaterEqual(layout["setting_row_height"], 96)
         self.assertGreaterEqual(layout["setting_description_wrap"], 560)
 
+    def test_page_tab_style_uses_blue_active_pill_and_rounded_hover_shadow(self):
+        style = desktop_app.PAGE_TAB_STYLE
+
+        self.assertEqual("#dbeafe", style["active_fill"])
+        self.assertEqual("#1d4ed8", style["active_text"])
+        self.assertGreaterEqual(style["radius"], 18)
+        self.assertGreaterEqual(style["hover_shadow_alpha"], 30)
+
+        image = desktop_app.render_page_tab_image(
+            width=128,
+            height=42,
+            active=False,
+            hover=True,
+        )
+        self.assertEqual((128, 42), image.size)
+        self.assertLessEqual(image.getpixel((0, 0))[3], 8)
+        self.assertGreater(image.getpixel((64, 21))[3], 0)
+
     def test_render_badge_image_returns_square_rgba_asset(self):
         image = desktop_app.render_badge_image("RUN", "#2563eb")
 

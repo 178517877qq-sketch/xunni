@@ -118,6 +118,22 @@ COCKPIT_LAYOUT = {
     "setting_description_wrap": 600,
 }
 
+PAGE_TAB_STYLE = {
+    "width": 132,
+    "height": 42,
+    "radius": 20,
+    "active_fill": "#dbeafe",
+    "active_border": "#bfdbfe",
+    "active_text": "#1d4ed8",
+    "inactive_fill": "#ffffff",
+    "inactive_border": "#eef2f7",
+    "inactive_text": "#475569",
+    "hover_fill": "#f8fbff",
+    "hover_border": "#bfdbfe",
+    "hover_shadow_alpha": 36,
+    "active_shadow_alpha": 22,
+}
+
 SETTINGS_FIELD_GROUPS: Dict[str, List[str]] = {
     "常用": [
         "USE_GLOBAL_MODE",
@@ -427,6 +443,51 @@ def render_rounded_surface(
     draw.rounded_rectangle(
         [1, 1, width - 2, height - 2],
         radius=max(1, radius),
+        fill=_hex_to_rgb(fill),
+        outline=_hex_to_rgb(border),
+        width=1,
+    )
+    return image
+
+
+def render_page_tab_image(width: int, height: int, active: bool = False, hover: bool = False) -> Image.Image:
+    width = max(2, int(width))
+    height = max(2, int(height))
+    radius = min(PAGE_TAB_STYLE["radius"], max(1, height // 2))
+    image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    shadow_alpha = 0
+    if hover:
+        shadow_alpha = PAGE_TAB_STYLE["hover_shadow_alpha"]
+    elif active:
+        shadow_alpha = PAGE_TAB_STYLE["active_shadow_alpha"]
+
+    if shadow_alpha:
+        shadow_mask = Image.new("L", (width, height), 0)
+        mask_draw = ImageDraw.Draw(shadow_mask)
+        mask_draw.rounded_rectangle(
+            [6, 7, width - 7, height - 5],
+            radius=radius,
+            fill=shadow_alpha,
+        )
+        shadow_mask = shadow_mask.filter(ImageFilter.GaussianBlur(7))
+        shadow = Image.new("RGBA", (width, height), (*_hex_to_rgb(COLORS["blue_dark"]), 0))
+        shadow.putalpha(shadow_mask)
+        image = Image.alpha_composite(image, shadow)
+
+    if active:
+        fill = PAGE_TAB_STYLE["active_fill"]
+        border = PAGE_TAB_STYLE["active_border"]
+    elif hover:
+        fill = PAGE_TAB_STYLE["hover_fill"]
+        border = PAGE_TAB_STYLE["hover_border"]
+    else:
+        fill = PAGE_TAB_STYLE["inactive_fill"]
+        border = PAGE_TAB_STYLE["inactive_border"]
+
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle(
+        [3, 3, width - 4, height - 4],
+        radius=radius,
         fill=_hex_to_rgb(fill),
         outline=_hex_to_rgb(border),
         width=1,
@@ -1136,13 +1197,13 @@ class DesktopApp:
         for index in range(len(NAV_ITEMS)):
             page_switcher.grid_columnconfigure(index, weight=1, uniform="page-tabs")
         for index, item in enumerate(NAV_ITEMS):
-            tab = self._primary_button(
+            tab = self._page_tab_button(
                 page_switcher,
-                item.label,
+                item,
                 lambda key=item.key: self._show_page(key),
-                variant="soft" if item.key == self.active_page else "ghost",
+                active=item.key == self.active_page,
             )
-            tab.grid(row=0, column=index, padx=(10 if index == 0 else 4, 10 if index == len(NAV_ITEMS) - 1 else 4), pady=10, sticky="ew")
+            tab.grid(row=0, column=index, padx=(10 if index == 0 else 5, 10 if index == len(NAV_ITEMS) - 1 else 5), pady=8, sticky="nsew")
             self.page_tab_buttons[item.key] = tab
 
         self.content_host = tk.Frame(main, bg=COLORS["bg"])
@@ -1391,6 +1452,69 @@ class DesktopApp:
         button.bind("<Enter>", lambda _event: animate_to(1.0), add="+")
         button.bind("<Leave>", lambda _event: animate_to(0.0), add="+")
         return button
+
+    def _page_tab_button(self, parent: Any, item: NavItem, command: Callable[[], None], active: bool = False) -> Any:
+        width = PAGE_TAB_STYLE["width"]
+        height = PAGE_TAB_STYLE["height"]
+        parent_bg = parent.cget("bg") if hasattr(parent, "cget") else COLORS["panel"]
+        tab = self.tk.Canvas(
+            parent,
+            width=width,
+            height=height,
+            bg=parent_bg,
+            bd=0,
+            highlightthickness=0,
+            cursor="hand2",
+        )
+        tab._tab_active = bool(active)
+        tab._tab_hover = False
+        tab._tab_anim_job = None
+
+        def draw_tab() -> None:
+            is_active = bool(getattr(tab, "_tab_active", False))
+            is_hover = bool(getattr(tab, "_tab_hover", False))
+            image = render_page_tab_image(width, height, active=is_active, hover=is_hover)
+            photo_key = f"page-tab-{item.key}:{is_active}:{is_hover}"
+            photo = ImageTk.PhotoImage(image, master=self.root)
+            self.surface_images[photo_key] = photo
+            tab.delete("all")
+            tab.create_image(0, 0, image=photo, anchor="nw")
+            text_color = PAGE_TAB_STYLE["active_text"] if is_active else PAGE_TAB_STYLE["inactive_text"]
+            if is_hover and not is_active:
+                text_color = COLORS["blue_dark"]
+            icon_color = text_color if is_active or is_hover else COLORS["muted"]
+            tab.create_text(
+                30,
+                height // 2,
+                text=NAV_ITEM_GLYPHS[item.key],
+                fill=icon_color,
+                font=("Microsoft YaHei UI", 8, "bold"),
+                anchor="center",
+            )
+            tab.create_text(
+                62,
+                height // 2,
+                text=item.label,
+                fill=text_color,
+                font=("Microsoft YaHei UI", 10, "bold"),
+                anchor="w",
+            )
+            tab.image = photo
+
+        def set_active(next_active: bool) -> None:
+            tab._tab_active = bool(next_active)
+            draw_tab()
+
+        def set_hover(next_hover: bool) -> None:
+            tab._tab_hover = bool(next_hover)
+            draw_tab()
+
+        tab._set_tab_active = set_active
+        tab.bind("<Button-1>", lambda _event, cb=command: cb())
+        tab.bind("<Enter>", lambda _event: set_hover(True), add="+")
+        tab.bind("<Leave>", lambda _event: set_hover(False), add="+")
+        draw_tab()
+        return tab
 
     def _pill_label(self, parent: Any, text: str, fill: str, fg: str, border: str | None = None) -> Any:
         height = 34
@@ -2042,7 +2166,9 @@ class DesktopApp:
                 self.page_title_var.set(PAGE_TITLES.get(item.key, item.label))
         for item in NAV_ITEMS:
             tab = self.page_tab_buttons.get(item.key)
-            if tab is not None and hasattr(tab, "_set_button_variant"):
+            if tab is not None and hasattr(tab, "_set_tab_active"):
+                tab._set_tab_active(item.key == key)
+            elif tab is not None and hasattr(tab, "_set_button_variant"):
                 tab._set_button_variant("soft" if item.key == key else "ghost")
         if key in {"workbench", "results"}:
             self._refresh_results()
