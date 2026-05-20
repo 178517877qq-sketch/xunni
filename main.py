@@ -17,6 +17,7 @@ import os
 import subprocess
 import shutil
 import json
+import ipaddress
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -144,7 +145,18 @@ def load_config():
         "FETCH_RETRY_DELAY": 3,
         "FETCH_TIMEOUT": 3,
         "FETCH_CONNECT_TIMEOUT": 3,
+        "LOCAL_SEED_FILES": ["重要ip.txt", "全量ip.txt"],
+        "ENABLE_CF_OFFICIAL_IP_SAMPLING": False,
+        "CF_OFFICIAL_IPV4_URL": "https://www.cloudflare.com/ips-v4",
+        "CF_OFFICIAL_SAMPLE_PER_24": 3,
+        "CF_OFFICIAL_SAMPLE_PORTS": [443],
+        "CF_OFFICIAL_COUNTRY_CODE": "CF",
         "OUTPUT_FILE": "ip.txt",
+        "OUTPUT_NODE_LIMIT": 24,
+        "STABILITY_SCORING_ENABLED": True,
+        "STABILITY_STATS_FILE": "ip_stats.json",
+        "STABILITY_HISTORY_WEIGHT": 1.0,
+        "STABILITY_MAX_BONUS": 35,
         "ENABLE_LOGGING": False,
         "LOG_FILE": "cfnb.log",
         "TEST_AVAILABILITY": True,
@@ -174,6 +186,8 @@ def load_config():
         "BANDWIDTH_WORKERS": 10,
         "DNS_UPDATE_MAX_RETRIES": 3,
         "DNS_UPDATE_RETRY_DELAY": 3,
+        "GITHUB_SYNC_ENABLED": True,
+        "GITHUB_SYNC_PROXY_URL": "",
         "GITHUB_SYNC_MAX_RETRIES": 3,
         "GITHUB_SYNC_RETRY_DELAY": 3,
         "GIT_SYNC_PROCESS_TIMEOUT": 180,
@@ -182,7 +196,7 @@ def load_config():
     for key, value in defaults.items():
         if key not in config:
             config[key] = value
-            print(f"⚠️ 配置项 {key} 未设置，使用默认值：{value}")
+            print(f"[WARN] config key {key} missing, using default: {value}")
 
     return config
 
@@ -218,7 +232,18 @@ FETCH_MAX_RETRIES = cfg["FETCH_MAX_RETRIES"]
 FETCH_RETRY_DELAY = cfg["FETCH_RETRY_DELAY"]
 FETCH_TIMEOUT = cfg["FETCH_TIMEOUT"]
 FETCH_CONNECT_TIMEOUT = cfg["FETCH_CONNECT_TIMEOUT"]
+LOCAL_SEED_FILES = cfg["LOCAL_SEED_FILES"]
+ENABLE_CF_OFFICIAL_IP_SAMPLING = cfg["ENABLE_CF_OFFICIAL_IP_SAMPLING"]
+CF_OFFICIAL_IPV4_URL = cfg["CF_OFFICIAL_IPV4_URL"]
+CF_OFFICIAL_SAMPLE_PER_24 = cfg["CF_OFFICIAL_SAMPLE_PER_24"]
+CF_OFFICIAL_SAMPLE_PORTS = cfg["CF_OFFICIAL_SAMPLE_PORTS"]
+CF_OFFICIAL_COUNTRY_CODE = cfg["CF_OFFICIAL_COUNTRY_CODE"]
 OUTPUT_FILE = cfg["OUTPUT_FILE"]
+OUTPUT_NODE_LIMIT = cfg["OUTPUT_NODE_LIMIT"]
+STABILITY_SCORING_ENABLED = cfg["STABILITY_SCORING_ENABLED"]
+STABILITY_STATS_FILE = cfg["STABILITY_STATS_FILE"]
+STABILITY_HISTORY_WEIGHT = cfg["STABILITY_HISTORY_WEIGHT"]
+STABILITY_MAX_BONUS = cfg["STABILITY_MAX_BONUS"]
 ENABLE_LOGGING = cfg["ENABLE_LOGGING"]
 LOG_FILE = cfg["LOG_FILE"]
 TEST_AVAILABILITY = cfg["TEST_AVAILABILITY"]
@@ -246,6 +271,8 @@ DNS_UPDATE_MAX_RETRIES = cfg["DNS_UPDATE_MAX_RETRIES"]
 DNS_UPDATE_RETRY_DELAY = cfg["DNS_UPDATE_RETRY_DELAY"]
 GITHUB_SYNC_MAX_RETRIES = cfg["GITHUB_SYNC_MAX_RETRIES"]
 GITHUB_SYNC_RETRY_DELAY = cfg["GITHUB_SYNC_RETRY_DELAY"]
+GITHUB_SYNC_ENABLED = cfg["GITHUB_SYNC_ENABLED"]
+GITHUB_SYNC_PROXY_URL = cfg["GITHUB_SYNC_PROXY_URL"]
 GIT_SYNC_PROCESS_TIMEOUT = cfg["GIT_SYNC_PROCESS_TIMEOUT"]
 
 socket.setdefaulttimeout(SOCKET_DEFAULT_TIMEOUT)
@@ -461,6 +488,146 @@ def fetch_additional_source(url):
                 print(f"已尝试 {max_retries} 次，放弃该数据源。")
                 return []
 
+def _resolve_local_path(path):
+    if os.path.isabs(path):
+        return path
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
+
+def load_local_seed_files(paths):
+    """读取本地种子文件，支持全量ip.txt、重要ip.txt 等标准节点列表。"""
+    nodes = []
+    for path in paths or []:
+        resolved_path = _resolve_local_path(path)
+        if not os.path.exists(resolved_path):
+            print(f"⚠️ 本地种子文件不存在，跳过: {path}")
+            continue
+        try:
+            with open(resolved_path, "r", encoding="utf-8") as f:
+                parsed = parse_adaptive(f.read())
+            print(f"从本地种子 {path} 解析出 {len(parsed)} 个节点。")
+            nodes.extend(parsed)
+        except Exception as e:
+            print(f"⚠️ 读取本地种子失败 ({path}): {e}")
+    return nodes
+
+def _sample_offsets_for_24(sample_count):
+    sample_count = max(1, int(sample_count))
+    if sample_count == 1:
+        return [1]
+    if sample_count == 2:
+        return [1, 254]
+
+    step = 253 / (sample_count - 1)
+    offsets = []
+    for index in range(sample_count):
+        offset = round(1 + (step * index))
+        offsets.append(max(1, min(254, offset)))
+    return list(dict.fromkeys(offsets))
+
+def sample_cloudflare_ipv4_cidrs(cidrs, ports, sample_per_24=3, country_code="CF"):
+    """从 Cloudflare 官方 IPv4 CIDR 按 /24 分段抽样生成候选节点。"""
+    nodes = []
+    ports = [int(port) for port in (ports or [443])]
+    offsets = _sample_offsets_for_24(sample_per_24)
+    country_code = (country_code or "CF").upper()
+
+    for cidr in cidrs or []:
+        cidr = cidr.strip()
+        if not cidr:
+            continue
+        try:
+            network = ipaddress.ip_network(cidr, strict=False)
+        except ValueError:
+            continue
+        if network.version != 4:
+            continue
+
+        subnets = [network] if network.prefixlen >= 24 else network.subnets(new_prefix=24)
+        for subnet in subnets:
+            base_ip = int(subnet.network_address)
+            usable_size = subnet.num_addresses
+            for offset in offsets:
+                if offset >= usable_size - 1:
+                    continue
+                ip = str(ipaddress.ip_address(base_ip + offset))
+                for port in ports:
+                    nodes.append(f"{ip}:{port}#{country_code}")
+    return nodes
+
+def fetch_cloudflare_official_ipv4_source(url, ports, sample_per_24, country_code):
+    """拉取 Cloudflare 官方 IPv4 CIDR 列表并抽样为候选节点。"""
+    if not url:
+        return []
+
+    for attempt in range(1, FETCH_MAX_RETRIES + 1):
+        try:
+            print(f"正在请求 Cloudflare 官方 IPv4 段 {url} (尝试 {attempt}/{FETCH_MAX_RETRIES}) ...")
+            resp = requests.get(url, timeout=(FETCH_CONNECT_TIMEOUT, FETCH_TIMEOUT))
+            resp.raise_for_status()
+            cidrs = [line.strip() for line in resp.text.splitlines() if line.strip()]
+            nodes = sample_cloudflare_ipv4_cidrs(
+                cidrs=cidrs,
+                ports=ports,
+                sample_per_24=sample_per_24,
+                country_code=country_code,
+            )
+            print(f"从 Cloudflare 官方 IPv4 段抽样生成 {len(nodes)} 个候选节点。")
+            return nodes
+        except Exception as e:
+            print(f"Cloudflare 官方 IPv4 段请求或抽样失败: {e}")
+            if attempt < FETCH_MAX_RETRIES:
+                print(f"等待 {FETCH_RETRY_DELAY} 秒后重试...")
+                time.sleep(FETCH_RETRY_DELAY)
+            else:
+                print(f"已尝试 {FETCH_MAX_RETRIES} 次，放弃 Cloudflare 官方 IPv4 段。")
+                return []
+
+def merge_nodes_preserve_order(node_groups):
+    """按完整 IP:端口 去重，保留不同端口候选。"""
+    nodes = []
+    seen = set()
+    for group in node_groups:
+        for node in group or []:
+            key = node.split("#", 1)[0]
+            if key in seen:
+                continue
+            seen.add(key)
+            nodes.append(node)
+    return nodes
+
+def is_country_allowed_for_pre_filter(node, allowed_countries, official_country_code=None, official_sampling_enabled=False):
+    parts = node.split("#")
+    if len(parts) != 2:
+        return False
+    country = parts[1].upper()
+    if country in allowed_countries:
+        return True
+    return bool(official_sampling_enabled and official_country_code and country == official_country_code.upper())
+
+def relabel_nodes_with_exit_country(nodes, ip_info, exit_details):
+    """用可用性 API 返回的真实落地国家修正候选节点标签。"""
+    relabeled_nodes = []
+    relabeled_ip_info = {}
+    relabeled_exit_details = {}
+    aliases = {}
+
+    for node in nodes:
+        exit_info = exit_details.get(node, {}) if exit_details else {}
+        country = str(exit_info.get("country", "")).upper()
+        new_node = node
+        if len(country) == 2 and "#" in node:
+            new_node = node.rsplit("#", 1)[0] + f"#{country}"
+            if new_node != node:
+                aliases[node] = new_node
+
+        relabeled_nodes.append(new_node)
+        if ip_info and node in ip_info:
+            relabeled_ip_info[new_node] = ip_info[node]
+        if exit_details and node in exit_details:
+            relabeled_exit_details[new_node] = exit_details[node]
+
+    return relabeled_nodes, relabeled_ip_info, relabeled_exit_details, aliases
+
 # =========================== 原有测试、测速、DNS、GitHub 等函数保持不变 ===========================
 
 def test_tcp_latency(ip, port, timeout=TIMEOUT, probes=TCP_PROBES):
@@ -634,6 +801,219 @@ def bandwidth_filter(candidates):
     results.sort(key=lambda x: x[1], reverse=True)
     return results
 
+def _stability_stats_path():
+    if os.path.isabs(STABILITY_STATS_FILE):
+        return STABILITY_STATS_FILE
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), STABILITY_STATS_FILE)
+
+def _safe_number(value, default=0.0):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+def load_stability_stats():
+    if not STABILITY_SCORING_ENABLED:
+        return {"nodes": {}}
+
+    path = _stability_stats_path()
+    if not os.path.exists(path):
+        return {"nodes": {}}
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return {"nodes": {}}
+        if not isinstance(data.get("nodes"), dict):
+            data["nodes"] = {}
+        return data
+    except Exception as e:
+        print(f"⚠️ 稳定性统计文件读取失败，将从空统计开始: {e}")
+        return {"nodes": {}}
+
+def save_stability_stats(stats):
+    if not STABILITY_SCORING_ENABLED:
+        return
+
+    path = _stability_stats_path()
+    tmp_path = path + ".tmp"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(stats, f, ensure_ascii=False, indent=2, sort_keys=True)
+            f.write("\n")
+        os.replace(tmp_path, path)
+        print(f"稳定性统计已保存到 {os.path.basename(path)}")
+    except Exception as e:
+        print(f"⚠️ 稳定性统计文件保存失败: {e}")
+
+def update_stability_stats(stats, attempted_nodes, bw_results, latency_map=None):
+    if not STABILITY_SCORING_ENABLED:
+        return stats
+
+    stats.setdefault("nodes", {})
+    speed_map = {node: speed for node, speed in bw_results}
+    unique_attempts = list(dict.fromkeys(list(attempted_nodes) + list(speed_map.keys())))
+    now = int(time.time())
+
+    for node in unique_attempts:
+        record = stats["nodes"].setdefault(
+            node,
+            {
+                "runs": 0,
+                "passes": 0,
+                "failures": 0,
+                "avg_speed_mbps": 0.0,
+                "best_speed_mbps": 0.0,
+                "avg_latency_ms": 0.0,
+                "best_latency_ms": 0.0,
+            },
+        )
+
+        previous_passes = int(record.get("passes", 0))
+        record["runs"] = int(record.get("runs", 0)) + 1
+        record["last_seen_ts"] = now
+
+        speed = _safe_number(speed_map.get(node), 0.0)
+        if speed > 0:
+            record["passes"] = previous_passes + 1
+            new_passes = record["passes"]
+            old_avg_speed = _safe_number(record.get("avg_speed_mbps"), 0.0)
+            record["avg_speed_mbps"] = round(((old_avg_speed * previous_passes) + speed) / new_passes, 3)
+            record["best_speed_mbps"] = round(max(_safe_number(record.get("best_speed_mbps"), 0.0), speed), 3)
+
+            if latency_map and node in latency_map:
+                latency_ms = _safe_number(latency_map[node], 0.0) * 1000
+                old_avg_latency = _safe_number(record.get("avg_latency_ms"), 0.0)
+                record["avg_latency_ms"] = round(((old_avg_latency * previous_passes) + latency_ms) / new_passes, 3)
+                best_latency = _safe_number(record.get("best_latency_ms"), 0.0)
+                record["best_latency_ms"] = round(latency_ms if best_latency <= 0 else min(best_latency, latency_ms), 3)
+        else:
+            record["failures"] = int(record.get("failures", 0)) + 1
+
+    stats["updated_at_ts"] = now
+    return stats
+
+def _latency_bonus(node, latency_map):
+    if not latency_map or node not in latency_map:
+        return 0.0
+    latency_ms = _safe_number(latency_map[node], 9999.0) * 1000
+    if latency_ms <= 0:
+        return 0.0
+    return max(0.0, (300.0 - min(latency_ms, 300.0)) / 300.0) * 20.0
+
+def _history_bonus(node, stats):
+    record = (stats or {}).get("nodes", {}).get(node, {})
+    runs = max(0, int(record.get("runs", 0)))
+    passes = max(0, int(record.get("passes", 0)))
+    failures = max(0, int(record.get("failures", 0)))
+    if runs <= 0 or passes <= 0:
+        return 0.0
+
+    pass_rate = passes / runs
+    experience = min(passes, 10) / 10.0
+    failure_drag = min(failures, 5) * 1.5
+    bonus = ((pass_rate * 0.7) + (experience * 0.3)) * STABILITY_MAX_BONUS
+    return max(0.0, bonus - failure_drag)
+
+def calculate_node_score(node, speed, latency_map=None, stats=None):
+    score = _safe_number(speed, 0.0)
+    score += _latency_bonus(node, latency_map)
+    if STABILITY_SCORING_ENABLED:
+        score += _history_bonus(node, stats or {}) * STABILITY_HISTORY_WEIGHT
+    return score
+
+def rank_bandwidth_results(bw_results, latency_map=None, stats=None):
+    ranked = []
+    for node, speed in bw_results:
+        score = calculate_node_score(node, speed, latency_map, stats)
+        latency = _safe_number((latency_map or {}).get(node), 9999.0)
+        ranked.append((node, speed, score, latency))
+
+    ranked.sort(key=lambda item: (-item[2], -item[1], item[3], item[0]))
+    return [(node, speed) for node, speed, _, _ in ranked]
+
+def _node_port(node_str):
+    match = IP_PORT_PATTERN.match(node_str)
+    if not match:
+        return ""
+    return match.group(2)
+
+def _split_port_priority(items, preferred_port="443"):
+    preferred = []
+    fallback = []
+    for item in items:
+        node = item[0]
+        if _node_port(node) == preferred_port:
+            preferred.append(item)
+        else:
+            fallback.append(item)
+    return preferred, fallback
+
+def select_final_nodes(
+    ranked_results,
+    tcp_results,
+    use_global_mode,
+    global_top_n,
+    per_country_top_n,
+    output_node_limit=None,
+):
+    limit = output_node_limit or global_top_n
+
+    if ranked_results:
+        preferred_results, fallback_results = _split_port_priority(ranked_results)
+        if use_global_mode:
+            target = min(global_top_n, limit)
+            selected = [node for node, _ in preferred_results[:target]]
+            if len(selected) < target:
+                remaining = target - len(selected)
+                selected.extend([node for node, _ in fallback_results[:remaining]])
+        else:
+            selected = []
+            country_counts = defaultdict(int)
+            for source in (preferred_results, fallback_results):
+                for node, _ in source:
+                    country = node.split("#")[-1].upper() if "#" in node else ""
+                    if not country:
+                        continue
+                    if country_counts[country] >= per_country_top_n:
+                        continue
+                    selected.append(node)
+                    country_counts[country] += 1
+                    if len(selected) >= limit:
+                        break
+                if len(selected) >= limit:
+                    break
+        return selected[:limit]
+
+    preferred_results, fallback_results = _split_port_priority(tcp_results)
+    if use_global_mode:
+        target = min(global_top_n, limit)
+        selected = [node for node, _, _, _ in preferred_results[:target]]
+        if len(selected) < target:
+            remaining = target - len(selected)
+            selected.extend([node for node, _, _, _ in fallback_results[:remaining]])
+        return selected
+
+    selected = []
+    country_counts = defaultdict(int)
+    for source in (preferred_results, fallback_results):
+        country_nodes = defaultdict(list)
+        for node_str, lat, country, succ in source:
+            country_nodes[country].append((node_str, lat, succ))
+        for country, nodes in country_nodes.items():
+            nodes_sorted = sorted(nodes, key=lambda x: (-x[2], x[1]))
+            for node_str, _, _ in nodes_sorted:
+                if len(selected) >= limit:
+                    return selected
+                if country_counts[country] >= per_country_top_n:
+                    break
+                selected.append(node_str)
+                country_counts[country] += 1
+                if len(selected) >= limit:
+                    return selected
+    return selected
+
 def batch_update_cloudflare_dns(ip_list, ip_info=None, full_bw_results=None, target_count=None, latency_map=None):
     if not cfg.get("CF_ENABLED", False):
         print("Cloudflare DNS 批量更新未启用。")
@@ -786,7 +1166,20 @@ def batch_update_cloudflare_dns(ip_list, ip_info=None, full_bw_results=None, tar
                 print(final_error)
                 send_wxpusher_notification(content=final_error, summary="DNS 更新失败")
 
+def build_github_sync_env(sync_proxy_url=None):
+    env = os.environ.copy()
+    proxy_url = GITHUB_SYNC_PROXY_URL if sync_proxy_url is None else sync_proxy_url
+    if proxy_url:
+        for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
+            env[key] = proxy_url
+    return env
+
+
 def sync_to_github():
+    if not GITHUB_SYNC_ENABLED:
+        print("GitHub sync disabled, skipped.")
+        return
+
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
     if sys.platform == "win32":
@@ -822,6 +1215,7 @@ def sync_to_github():
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                env=build_github_sync_env(),
                 creationflags=creationflags
             )
 
@@ -858,11 +1252,12 @@ def main():
     print(f"IPv6 客户端 IP 过滤（仅作用于DNS更新环节）：{'启用' if FILTER_IPV6_AVAILABILITY else '禁用'}")
     print(f"屏蔽国家过滤（仅作用于DNS更新环节）：{'启用' if FILTER_BLOCKED_COUNTRIES_ENABLED else '禁用'}，屏蔽国家：{', '.join(BLOCKED_COUNTRIES)}")
     print(f"带宽测速候选数：{BANDWIDTH_CANDIDATES}，测速文件大小：{BANDWIDTH_SIZE_MB} MB，超时：{BANDWIDTH_TIMEOUT}s")
+    print(f"最终输出上限：{OUTPUT_NODE_LIMIT} 个节点，稳定性评分：{'启用' if STABILITY_SCORING_ENABLED else '禁用'}")
     if FILTER_COUNTRIES_ENABLED:
         print(f"国家过滤：启用，允许国家：{', '.join(ALLOWED_COUNTRIES)}")
 
-    # 统一从 ADDITIONAL_SOURCES 加载所有数据源
-    nodes = []
+    # 统一从远程源、本地种子和可选官方 CIDR 抽样加载候选节点
+    node_groups = []
     additional_sources = cfg.get("ADDITIONAL_SOURCES", [])
     for source in additional_sources:
         if not source.get("enabled", True):
@@ -872,14 +1267,23 @@ def main():
             continue
         v2_nodes = fetch_additional_source(url)
         if v2_nodes:
-            seen = set()
-            for n in nodes:
-                seen.add(n.split('#')[0])
-            for n in v2_nodes:
-                key = n.split('#')[0]
-                if key not in seen:
-                    seen.add(key)
-                    nodes.append(n)
+            node_groups.append(v2_nodes)
+
+    local_seed_nodes = load_local_seed_files(LOCAL_SEED_FILES)
+    if local_seed_nodes:
+        node_groups.append(local_seed_nodes)
+
+    if ENABLE_CF_OFFICIAL_IP_SAMPLING:
+        official_nodes = fetch_cloudflare_official_ipv4_source(
+            url=CF_OFFICIAL_IPV4_URL,
+            ports=CF_OFFICIAL_SAMPLE_PORTS,
+            sample_per_24=CF_OFFICIAL_SAMPLE_PER_24,
+            country_code=CF_OFFICIAL_COUNTRY_CODE,
+        )
+        if official_nodes:
+            node_groups.append(official_nodes)
+
+    nodes = merge_nodes_preserve_order(node_groups)
     print(f"合并后总计 {len(nodes)} 个节点。")
 
     if not nodes:
@@ -891,8 +1295,12 @@ def main():
         allowed_set = {c.upper() for c in ALLOWED_COUNTRIES}
         filtered_nodes = []
         for node in nodes:
-            parts = node.split('#')
-            if len(parts) == 2 and parts[1].upper() in allowed_set:
+            if is_country_allowed_for_pre_filter(
+                node,
+                allowed_countries=allowed_set,
+                official_country_code=CF_OFFICIAL_COUNTRY_CODE,
+                official_sampling_enabled=ENABLE_CF_OFFICIAL_IP_SAMPLING,
+            ):
                 filtered_nodes.append(node)
         nodes = filtered_nodes
         after = len(nodes)
@@ -950,6 +1358,17 @@ def main():
         sys.exit(0)
 
     candidates_after_availability, avail_ip_info, avail_exit_details = availability_filter_with_retry(candidates)
+    candidates_after_availability, avail_ip_info, avail_exit_details, relabeled_aliases = relabel_nodes_with_exit_country(
+        candidates_after_availability,
+        avail_ip_info,
+        avail_exit_details,
+    )
+    for old_node, new_node in relabeled_aliases.items():
+        if old_node in latency_map:
+            latency_map[new_node] = latency_map[old_node]
+    if relabeled_aliases:
+        print(f"已根据可用性 API 修正 {len(relabeled_aliases)} 个节点的国家标签。")
+    stability_stats = load_stability_stats()
 
     bw_results = []
     for attempt in range(1, BANDWIDTH_RETRY_MAX + 1):
@@ -961,45 +1380,50 @@ def main():
             print(f"⚠️ 本轮测速无有效结果，等待 {BANDWIDTH_RETRY_DELAY} 秒后重试...")
             time.sleep(BANDWIDTH_RETRY_DELAY)
 
+    ranked_bw_results = []
+    if bw_results:
+        stability_stats = update_stability_stats(
+            stability_stats,
+            candidates_after_availability,
+            bw_results,
+            latency_map=latency_map,
+        )
+        ranked_bw_results = rank_bandwidth_results(bw_results, latency_map=latency_map, stats=stability_stats)
+        save_stability_stats(stability_stats)
     if not bw_results:
         print("\n⚠️ 带宽测速多次重试仍无有效结果，将使用 TCP 筛选结果作为最终节点。")
         send_wxpusher_notification(
             content=f"带宽测速经 {BANDWIDTH_RETRY_MAX} 轮尝试后仍无有效结果，已降级使用 TCP 排序节点。",
             summary="带宽测速全部失败"
         )
-        if USE_GLOBAL_MODE:
-            final_selected = [node for node, _, _, _ in results[:GLOBAL_TOP_N]]
-        else:
-            final_selected = []
-            for country, nodes in country_nodes.items():
-                nodes_sorted = sorted(nodes, key=lambda x: (-x[2], x[1]))
-                for node_str, _, _ in nodes_sorted[:PER_COUNTRY_TOP_N]:
-                    final_selected.append(node_str)
+        final_selected = select_final_nodes(
+            ranked_results=[],
+            tcp_results=results,
+            use_global_mode=USE_GLOBAL_MODE,
+            global_top_n=GLOBAL_TOP_N,
+            per_country_top_n=PER_COUNTRY_TOP_N,
+            output_node_limit=OUTPUT_NODE_LIMIT,
+        )
     else:
-        if USE_GLOBAL_MODE:
-            final_selected = [node for node, _ in bw_results[:GLOBAL_TOP_N]]
-        else:
-            country_speed_nodes = defaultdict(list)
-            for node, speed in bw_results:
-                country = node.split('#')[-1] if '#' in node else ''
-                if country:
-                    country_speed_nodes[country].append((node, speed))
-            final_selected = []
-            for country, nodes in country_speed_nodes.items():
-                for node, speed in nodes[:PER_COUNTRY_TOP_N]:
-                    final_selected.append(node)
-            speed_map = {node: speed for node, speed in bw_results}
-            final_selected.sort(key=lambda x: speed_map.get(x, 0), reverse=True)
+        final_selected = select_final_nodes(
+            ranked_results=ranked_bw_results,
+            tcp_results=results,
+            use_global_mode=USE_GLOBAL_MODE,
+            global_top_n=GLOBAL_TOP_N,
+            per_country_top_n=PER_COUNTRY_TOP_N,
+            output_node_limit=OUTPUT_NODE_LIMIT,
+        )
 
         print("\n================ 最终优选节点 ================")
         speed_map = {node: speed for node, speed in bw_results}
         for i, node in enumerate(final_selected, 1):
             speed = speed_map.get(node, 0)
             lat_sec = latency_map.get(node, float('inf'))
+            score = calculate_node_score(node, speed, latency_map=latency_map, stats=stability_stats)
             if lat_sec != float('inf'):
-                print(f"{i}. {node} 速度 {speed:.2f} Mbps 延迟 {lat_sec*1000:.2f} ms")
+                print(f"{i}. {node} 速度 {speed:.2f} Mbps 延迟 {lat_sec*1000:.2f} ms 综合分 {score:.2f}")
             else:
-                print(f"{i}. {node} 速度 {speed:.2f} Mbps")
+                print(f"{i}. {node} 速度 {speed:.2f} Mbps 综合分 {score:.2f}")
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         for node_str in final_selected:
@@ -1013,11 +1437,11 @@ def main():
     except Exception as e:
         print(f"读取 {OUTPUT_FILE} 时发生错误: {e}")
 
-    target_dns_count = GLOBAL_TOP_N if USE_GLOBAL_MODE else PER_COUNTRY_TOP_N
+    target_dns_count = min(DNS_UPDATE_TARGET_COUNT, OUTPUT_NODE_LIMIT)
     batch_update_cloudflare_dns(
         ip_list,
         ip_info=avail_ip_info,
-        full_bw_results=bw_results,
+        full_bw_results=ranked_bw_results or bw_results,
         target_count=target_dns_count,
         latency_map=latency_map
     )
