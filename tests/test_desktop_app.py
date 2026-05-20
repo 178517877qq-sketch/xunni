@@ -258,8 +258,18 @@ class DesktopAppHelperTests(unittest.TestCase):
 
         self.assertEqual("#dbeafe", style["active_fill"])
         self.assertEqual("#1d4ed8", style["active_text"])
+        self.assertTrue(style["inactive_transparent"])
         self.assertGreaterEqual(style["radius"], 18)
         self.assertGreaterEqual(style["hover_shadow_alpha"], 30)
+
+        inactive_image = desktop_app.render_page_tab_image(
+            width=128,
+            height=42,
+            active=False,
+            hover=False,
+        )
+        self.assertEqual((128, 42), inactive_image.size)
+        self.assertEqual(0, inactive_image.getpixel((64, 21))[3])
 
         image = desktop_app.render_page_tab_image(
             width=128,
@@ -270,6 +280,19 @@ class DesktopAppHelperTests(unittest.TestCase):
         self.assertEqual((128, 42), image.size)
         self.assertLessEqual(image.getpixel((0, 0))[3], 8)
         self.assertGreater(image.getpixel((64, 21))[3], 0)
+
+    def test_page_tabs_use_drawn_line_icons_instead_of_text_glyphs(self):
+        self.assertEqual(
+            ["workbench", "results", "settings", "logs"],
+            list(desktop_app.PAGE_TAB_ICONS),
+        )
+        self.assertNotIn("Run", desktop_app.PAGE_TAB_ICONS.values())
+        self.assertNotIn("IP", desktop_app.PAGE_TAB_ICONS.values())
+
+        icon = desktop_app.render_nav_icon_image("workbench", "#1d4ed8")
+        self.assertEqual((18, 18), icon.size)
+        self.assertEqual("RGBA", icon.mode)
+        self.assertGreater(icon.getchannel("A").getextrema()[1], 0)
 
     def test_render_badge_image_returns_square_rgba_asset(self):
         image = desktop_app.render_badge_image("RUN", "#2563eb")

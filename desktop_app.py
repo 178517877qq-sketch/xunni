@@ -119,19 +119,27 @@ COCKPIT_LAYOUT = {
 }
 
 PAGE_TAB_STYLE = {
-    "width": 132,
+    "width": 126,
     "height": 42,
     "radius": 20,
     "active_fill": "#dbeafe",
     "active_border": "#bfdbfe",
     "active_text": "#1d4ed8",
+    "inactive_transparent": True,
     "inactive_fill": "#ffffff",
-    "inactive_border": "#eef2f7",
+    "inactive_border": "#ffffff",
     "inactive_text": "#475569",
-    "hover_fill": "#f8fbff",
-    "hover_border": "#bfdbfe",
+    "hover_fill": "#ffffff",
+    "hover_border": "#edf4ff",
     "hover_shadow_alpha": 36,
     "active_shadow_alpha": 22,
+}
+
+PAGE_TAB_ICONS = {
+    "workbench": "overview",
+    "results": "list",
+    "settings": "sliders",
+    "logs": "folder",
 }
 
 SETTINGS_FIELD_GROUPS: Dict[str, List[str]] = {
@@ -474,6 +482,9 @@ def render_page_tab_image(width: int, height: int, active: bool = False, hover: 
         shadow.putalpha(shadow_mask)
         image = Image.alpha_composite(image, shadow)
 
+    if not active and not hover and PAGE_TAB_STYLE.get("inactive_transparent", False):
+        return image
+
     if active:
         fill = PAGE_TAB_STYLE["active_fill"]
         border = PAGE_TAB_STYLE["active_border"]
@@ -492,6 +503,36 @@ def render_page_tab_image(width: int, height: int, active: bool = False, hover: 
         outline=_hex_to_rgb(border),
         width=1,
     )
+    return image
+
+
+def render_nav_icon_image(kind: str, color: str, size: int = 18) -> Image.Image:
+    size = max(14, int(size))
+    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    color_rgb = _hex_to_rgb(color)
+    w = max(2, size // 9)
+    c = size / 2
+    r = size * 0.31
+
+    if kind == "overview":
+        draw.ellipse([c - r, c - r, c + r, c + r], outline=color_rgb, width=w)
+        draw.arc([c - r * 0.62, c - r * 0.62, c + r * 0.62, c + r * 0.62], 200, 520, fill=color_rgb, width=w)
+        draw.line([(c, c - r * 0.95), (c + r * 0.35, c - r * 0.45)], fill=color_rgb, width=w)
+    elif kind == "list":
+        for y in (size * 0.28, size * 0.5, size * 0.72):
+            draw.rounded_rectangle([size * 0.18, y - 1, size * 0.30, y + 1], radius=1, fill=color_rgb)
+            draw.line([(size * 0.40, y), (size * 0.82, y)], fill=color_rgb, width=w)
+    elif kind == "sliders":
+        lines = [(size * 0.30, size * 0.27, size * 0.62), (size * 0.50, size * 0.40, size * 0.76), (size * 0.70, size * 0.24, size * 0.58)]
+        for x, knob_y, line_end in lines:
+            draw.line([(x, size * 0.18), (x, size * 0.82)], fill=color_rgb, width=w)
+            draw.ellipse([x - size * 0.09, knob_y - size * 0.09, x + size * 0.09, knob_y + size * 0.09], outline=color_rgb, width=w)
+    elif kind == "folder":
+        draw.line([(size * 0.16, size * 0.38), (size * 0.38, size * 0.38), (size * 0.46, size * 0.30), (size * 0.68, size * 0.30)], fill=color_rgb, width=w)
+        draw.rounded_rectangle([size * 0.16, size * 0.38, size * 0.84, size * 0.74], radius=max(2, size // 7), outline=color_rgb, width=w)
+    else:
+        draw.ellipse([size * 0.24, size * 0.24, size * 0.76, size * 0.76], outline=color_rgb, width=w)
     return image
 
 
@@ -1194,16 +1235,16 @@ class DesktopApp:
             shadow=True,
             cache_key="page-switcher",
         )
-        for index in range(len(NAV_ITEMS)):
-            page_switcher.grid_columnconfigure(index, weight=1, uniform="page-tabs")
+        page_tabs_inner = tk.Frame(page_switcher, bg=COLORS["panel"])
+        page_tabs_inner.pack(fill="both", expand=True, padx=10, pady=8)
         for index, item in enumerate(NAV_ITEMS):
             tab = self._page_tab_button(
-                page_switcher,
+                page_tabs_inner,
                 item,
                 lambda key=item.key: self._show_page(key),
                 active=item.key == self.active_page,
             )
-            tab.grid(row=0, column=index, padx=(10 if index == 0 else 5, 10 if index == len(NAV_ITEMS) - 1 else 5), pady=8, sticky="nsew")
+            tab.pack(side="left", padx=(0, 8 if index < len(NAV_ITEMS) - 1 else 0))
             self.page_tab_buttons[item.key] = tab
 
         self.content_host = tk.Frame(main, bg=COLORS["bg"])
@@ -1469,6 +1510,7 @@ class DesktopApp:
         tab._tab_active = bool(active)
         tab._tab_hover = False
         tab._tab_anim_job = None
+        tab._tab_icon_refs = []
 
         def draw_tab() -> None:
             is_active = bool(getattr(tab, "_tab_active", False))
@@ -1483,16 +1525,14 @@ class DesktopApp:
             if is_hover and not is_active:
                 text_color = COLORS["blue_dark"]
             icon_color = text_color if is_active or is_hover else COLORS["muted"]
+            icon_image = render_nav_icon_image(PAGE_TAB_ICONS[item.key], icon_color)
+            icon_photo_key = f"page-tab-icon-{item.key}:{icon_color}"
+            icon_photo = ImageTk.PhotoImage(icon_image, master=self.root)
+            self.surface_images[icon_photo_key] = icon_photo
+            tab._tab_icon_refs = [icon_photo]
+            tab.create_image(28, height // 2, image=icon_photo, anchor="center")
             tab.create_text(
-                30,
-                height // 2,
-                text=NAV_ITEM_GLYPHS[item.key],
-                fill=icon_color,
-                font=("Microsoft YaHei UI", 8, "bold"),
-                anchor="center",
-            )
-            tab.create_text(
-                62,
+                56,
                 height // 2,
                 text=item.label,
                 fill=text_color,
