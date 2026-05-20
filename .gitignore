@@ -1,6 +1,13 @@
+node_modules/
+dist/
+src-tauri/target/
+*.log
+__pycache__/
+tests/__pycache__/
 config.json
+ip_stats.json
+push_log.txt
 git_sync.ps1
 git_sync.sh
-__pycache__/
-ip_stats.json
-backups/
+全量ip.txt
+重要ip.txt
