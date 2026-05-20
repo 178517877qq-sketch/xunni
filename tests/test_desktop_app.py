@@ -200,6 +200,37 @@ class DesktopAppHelperTests(unittest.TestCase):
             ]),
         )
 
+    def test_action_button_variants_define_clear_visual_hierarchy(self):
+        self.assertEqual("#2563eb", desktop_app.BUTTON_VARIANTS["primary"]["bg"])
+        self.assertEqual("#dc2626", desktop_app.BUTTON_VARIANTS["danger"]["bg"])
+        self.assertEqual("#ffffff", desktop_app.BUTTON_VARIANTS["secondary"]["bg"])
+        self.assertEqual("#dbeafe", desktop_app.BUTTON_VARIANTS["soft"]["bg"])
+
+    def test_build_workbench_status_cards_summarizes_runtime_state(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            config_path = root / "config.json"
+            output = root / "ip.txt"
+            output.write_text("1.1.1.1:443#US\n1.1.1.2:2053#JP\n", encoding="utf-8")
+
+            cards = desktop_app.build_workbench_status_cards(
+                config_path,
+                {"OUTPUT_FILE": "ip.txt", "GITHUB_SYNC_PROXY_URL": "http://127.0.0.1:7890"},
+                environ={"HTTPS_PROXY": "http://127.0.0.1:7890"},
+            )
+
+        self.assertEqual(["VPN/代理提醒", "当前 ip.txt", "GitHub 上传"], [card.title for card in cards])
+        self.assertEqual("检测到代理变量", cards[0].value)
+        self.assertEqual("2", cards[1].value)
+        self.assertEqual("50%", cards[1].detail)
+        self.assertEqual("代理已配置", cards[2].value)
+
+    def test_build_restore_confirmation_message_mentions_protective_backup(self):
+        message = desktop_app.build_restore_confirmation_message(Path("ip.txt.20260101-000000.bak"))
+
+        self.assertIn("恢复前会先备份当前 ip.txt", message)
+        self.assertIn("ip.txt.20260101-000000.bak", message)
+
 
 if __name__ == "__main__":
     unittest.main()

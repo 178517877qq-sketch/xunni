@@ -32,6 +32,14 @@ class NavItem:
 
 
 @dataclass(frozen=True)
+class StatusCard:
+    title: str
+    value: str
+    detail: str
+    accent: str
+
+
+@dataclass(frozen=True)
 class PreflightReport:
     text: str
     can_continue: bool
@@ -154,6 +162,44 @@ COLORS = {
     "input": "#eef2f7",
 }
 
+BUTTON_VARIANTS = {
+    "primary": {
+        "bg": COLORS["blue"],
+        "fg": "#ffffff",
+        "activebackground": COLORS["blue_dark"],
+        "activeforeground": "#ffffff",
+        "border": COLORS["blue"],
+    },
+    "secondary": {
+        "bg": COLORS["card"],
+        "fg": COLORS["text"],
+        "activebackground": COLORS["blue_soft"],
+        "activeforeground": COLORS["text"],
+        "border": COLORS["border"],
+    },
+    "soft": {
+        "bg": COLORS["blue_soft"],
+        "fg": COLORS["blue_dark"],
+        "activebackground": "#bfdbfe",
+        "activeforeground": COLORS["blue_dark"],
+        "border": "#bfdbfe",
+    },
+    "danger": {
+        "bg": COLORS["red"],
+        "fg": "#ffffff",
+        "activebackground": "#b91c1c",
+        "activeforeground": "#ffffff",
+        "border": COLORS["red"],
+    },
+    "ghost": {
+        "bg": "#f8fbff",
+        "fg": COLORS["muted"],
+        "activebackground": COLORS["blue_soft"],
+        "activeforeground": COLORS["blue_dark"],
+        "border": "#f8fbff",
+    },
+}
+
 
 def load_config_file(path: Path | str) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
@@ -242,6 +288,57 @@ def calculate_port_share(lines: Iterable[str], port: int | str = 443) -> str:
     return f"{round((matched / len(items)) * 100):.0f}%"
 
 
+def build_workbench_status_cards(
+    config_path: Path | str,
+    config: Mapping[str, Any],
+    environ: Mapping[str, str] | None = None,
+) -> List[StatusCard]:
+    environ = os.environ if environ is None else environ
+    proxy_env_keys = [
+        key for key, value in environ.items()
+        if key.upper() in {"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"} and value
+    ]
+    if proxy_env_keys:
+        vpn_card = StatusCard(
+            "VPN/代理提醒",
+            "检测到代理变量",
+            "优选前请确认测速不走代理",
+            COLORS["red"],
+        )
+    else:
+        vpn_card = StatusCard(
+            "VPN/代理提醒",
+            "请断开 VPN",
+            "测速阶段保持本地直连",
+            COLORS["red"],
+        )
+
+    try:
+        output_lines = read_output_lines(config_path, config)
+        count = str(len(output_lines))
+        share = calculate_port_share(output_lines)
+    except Exception:
+        count = "0"
+        share = "读取失败"
+
+    output_card = StatusCard(
+        "当前 ip.txt",
+        count,
+        share,
+        COLORS["text"],
+    )
+
+    proxy_url = str(config.get("GITHUB_SYNC_PROXY_URL", "")).strip()
+    github_card = StatusCard(
+        "GitHub 上传",
+        "代理已配置" if proxy_url else "代理未配置",
+        proxy_url or "上传阶段可单独走代理",
+        COLORS["green"] if proxy_url else COLORS["muted"],
+    )
+
+    return [vpn_card, output_card, github_card]
+
+
 def list_output_backups(config_path: Path | str, config: Mapping[str, Any]) -> List[Path]:
     output_path = resolve_output_path(config_path, config)
     backup_dir = resolve_backup_dir(config_path, config)
@@ -307,6 +404,15 @@ def format_backup_label(path: Path) -> str:
     size = path.stat().st_size
     stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(path.stat().st_mtime))
     return f"{stamp}  {path.name}  {size} B"
+
+
+def build_restore_confirmation_message(backup_path: Path | str) -> str:
+    path = Path(backup_path)
+    return (
+        "将用此备份覆盖当前 ip.txt：\n"
+        f"{path.name}\n\n"
+        "恢复前会先备份当前 ip.txt。继续？"
+    )
 
 
 def build_preflight_report(
@@ -576,8 +682,12 @@ class DesktopApp:
         self.output_updated_var = tk.StringVar(value="未生成")
         self.github_status_var = tk.StringVar(value="未检查")
         self.vpn_status_var = tk.StringVar(value="请断开 VPN 后优选")
+        self.vpn_detail_var = tk.StringVar(value="测速阶段保持本地直连")
+        self.result_detail_var = tk.StringVar(value="443 占比 0%")
+        self.github_detail_var = tk.StringVar(value="上传阶段可单独走代理")
         self.backup_count_var = tk.StringVar(value="0")
         self.output_file_var = tk.StringVar(value="")
+        self.status_accent_vars: Dict[str, Any] = {}
 
         self.config_data: Dict[str, Any] = {}
         self.form_vars: Dict[str, Any] = {}
@@ -628,20 +738,20 @@ class DesktopApp:
         sidebar.grid(row=0, column=0, sticky="ns")
         sidebar.grid_propagate(False)
 
-        tk.Label(sidebar, text="cfnb", bg="#f8fbff", fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 14, "bold")).pack(pady=(24, 22))
+        tk.Label(sidebar, text="cfnb", bg="#f8fbff", fg=COLORS["blue_dark"], font=("Microsoft YaHei UI", 14, "bold")).pack(pady=(24, 18))
         for item in NAV_ITEMS:
             button = tk.Button(
                 sidebar,
-                text=item.short_label,
+                text=f"{item.short_label}\n{item.label}",
                 command=lambda key=item.key: self._show_page(key),
                 relief="flat",
                 bd=0,
-                width=7,
-                height=2,
-                font=("Segoe UI", 9, "bold"),
+                width=9,
+                height=3,
+                font=("Microsoft YaHei UI", 8, "bold"),
                 cursor="hand2",
             )
-            button.pack(padx=14, pady=7)
+            button.pack(padx=12, pady=6)
             self.nav_buttons[item.key] = button
 
         tk.Label(sidebar, text="手动", bg="#f8fbff", fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(side="bottom", pady=(0, 18))
@@ -668,7 +778,7 @@ class DesktopApp:
         self._build_logs_page()
         self._show_page("workbench")
 
-    def _card(self, parent: Any, title: str | None = None, padding: int = 14) -> Any:
+    def _card(self, parent: Any, title: str | None = None, subtitle: str | None = None, padding: int = 14) -> Any:
         frame = self.tk.Frame(
             parent,
             bg=COLORS["card"],
@@ -678,26 +788,42 @@ class DesktopApp:
         )
         if title:
             self.tk.Label(frame, text=title, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 11, "bold")).pack(anchor="w", padx=padding, pady=(padding, 4))
+        if subtitle:
+            self.tk.Label(frame, text=subtitle, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(anchor="w", padx=padding, pady=(0, 4))
         return frame
 
-    def _metric_card(self, parent: Any, title: str, variable: Any, accent: str = COLORS["text"]) -> Any:
+    def _metric_card(self, parent: Any, title: str, variable: Any, accent: str = COLORS["text"], detail_variable: Any | None = None) -> Any:
         frame = self._card(parent)
         self.tk.Label(frame, text=title, bg=COLORS["card"], fg=COLORS["text"], font=("Microsoft YaHei UI", 10, "bold")).pack(anchor="w", padx=14, pady=(12, 2))
-        self.tk.Label(frame, textvariable=variable, bg=COLORS["card"], fg=accent, font=("Segoe UI", 24, "bold")).pack(anchor="w", padx=14, pady=(0, 12))
+        value_label = self.tk.Label(frame, textvariable=variable, bg=COLORS["card"], fg=accent, font=("Microsoft YaHei UI", 22, "bold"))
+        value_label.pack(anchor="w", padx=14, pady=(0, 0))
+        if detail_variable is not None:
+            self.tk.Label(frame, textvariable=detail_variable, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9)).pack(anchor="w", padx=14, pady=(0, 12))
+        else:
+            self.tk.Frame(frame, height=12, bg=COLORS["card"]).pack(fill="x")
         return frame
 
-    def _primary_button(self, parent: Any, text: str, command: Callable[[], None], primary: bool = False) -> Any:
+    def _primary_button(
+        self,
+        parent: Any,
+        text: str,
+        command: Callable[[], None],
+        primary: bool = False,
+        variant: str | None = None,
+    ) -> Any:
+        chosen_variant = variant or ("primary" if primary else "secondary")
+        style = BUTTON_VARIANTS[chosen_variant]
         return self.tk.Button(
             parent,
             text=text,
             command=command,
-            bg=COLORS["blue"] if primary else COLORS["card"],
-            fg="#ffffff" if primary else COLORS["text"],
-            activebackground=COLORS["blue_dark"] if primary else COLORS["blue_soft"],
-            activeforeground="#ffffff" if primary else COLORS["text"],
+            bg=style["bg"],
+            fg=style["fg"],
+            activebackground=style["activebackground"],
+            activeforeground=style["activeforeground"],
             relief="flat",
             bd=0,
-            highlightbackground=COLORS["border"],
+            highlightbackground=style["border"],
             highlightthickness=1,
             padx=14,
             pady=10,
@@ -717,31 +843,37 @@ class DesktopApp:
         metrics.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 16))
         for col in range(3):
             metrics.grid_columnconfigure(col, weight=1, uniform="metrics")
-        self._metric_card(metrics, "VPN/代理提醒", self.vpn_status_var, COLORS["red"]).grid(row=0, column=0, sticky="ew", padx=(0, 12))
-        self._metric_card(metrics, "当前 ip.txt 节点", self.result_count_var).grid(row=0, column=1, sticky="ew", padx=6)
-        self._metric_card(metrics, "GitHub 同步代理", self.github_status_var, COLORS["green"]).grid(row=0, column=2, sticky="ew", padx=(12, 0))
+        vpn_card = self._metric_card(metrics, "VPN/代理提醒", self.vpn_status_var, COLORS["red"], self.vpn_detail_var)
+        vpn_card.grid(row=0, column=0, sticky="ew", padx=(0, 12))
+        self.status_accent_vars["vpn"] = vpn_card.winfo_children()[1]
+        result_card = self._metric_card(metrics, "当前 ip.txt", self.result_count_var, COLORS["text"], self.result_detail_var)
+        result_card.grid(row=0, column=1, sticky="ew", padx=6)
+        self.status_accent_vars["result"] = result_card.winfo_children()[1]
+        github_card = self._metric_card(metrics, "GitHub 上传", self.github_status_var, COLORS["green"], self.github_detail_var)
+        github_card.grid(row=0, column=2, sticky="ew", padx=(12, 0))
+        self.status_accent_vars["github"] = github_card.winfo_children()[1]
 
         left = self.tk.Frame(page, bg=COLORS["bg"])
         left.grid(row=1, column=0, sticky="nsew", padx=(0, 14))
         left.grid_rowconfigure(2, weight=1)
         left.grid_columnconfigure(0, weight=1)
 
-        action_card = self._card(left, "手动操作")
+        action_card = self._card(left, "手动操作", "优选阶段建议断开 VPN；上传阶段可单独走代理。")
         action_card.grid(row=0, column=0, sticky="ew", pady=(0, 14))
         actions = self.tk.Frame(action_card, bg=COLORS["card"])
         actions.pack(fill="x", padx=14, pady=(8, 14))
         for col in range(4):
             actions.grid_columnconfigure(col, weight=1, uniform="actions")
         self._primary_button(actions, "只运行优选", lambda: self._start_optimize(sync_after=False), primary=True).grid(row=0, column=0, sticky="ew", padx=(0, 8))
-        self._primary_button(actions, "优选后自动上传", lambda: self._start_optimize(sync_after=True)).grid(row=0, column=1, sticky="ew", padx=4)
+        self._primary_button(actions, "优选后自动上传", lambda: self._start_optimize(sync_after=True), variant="soft").grid(row=0, column=1, sticky="ew", padx=4)
         self._primary_button(actions, "上传到 GitHub", self._start_sync_only).grid(row=0, column=2, sticky="ew", padx=4)
         self._primary_button(actions, "测试 GitHub 代理", self._start_proxy_test).grid(row=0, column=3, sticky="ew", padx=(8, 0))
-        self._primary_button(actions, "停止当前任务", self.runner.stop).grid(row=1, column=0, sticky="ew", pady=(10, 0), padx=(0, 8))
-        self._primary_button(actions, "保存配置", self._save_to_disk).grid(row=1, column=1, sticky="ew", pady=(10, 0), padx=4)
-        self._primary_button(actions, "刷新检查", self._refresh_dashboard).grid(row=1, column=2, sticky="ew", pady=(10, 0), padx=4)
-        self._primary_button(actions, "打开输出目录", self._open_output_folder).grid(row=1, column=3, sticky="ew", pady=(10, 0), padx=(8, 0))
+        self._primary_button(actions, "停止当前任务", self.runner.stop, variant="danger").grid(row=1, column=0, sticky="ew", pady=(10, 0), padx=(0, 8))
+        self._primary_button(actions, "保存配置", self._save_to_disk, variant="secondary").grid(row=1, column=1, sticky="ew", pady=(10, 0), padx=4)
+        self._primary_button(actions, "刷新检查", self._refresh_dashboard, variant="secondary").grid(row=1, column=2, sticky="ew", pady=(10, 0), padx=4)
+        self._primary_button(actions, "打开输出目录", self._open_output_folder, variant="secondary").grid(row=1, column=3, sticky="ew", pady=(10, 0), padx=(8, 0))
 
-        preview_card = self._card(left, "最新结果预览")
+        preview_card = self._card(left, "最新结果预览", "客户端还会二次优选，这里优先保持 443 输出稳定。")
         preview_card.grid(row=1, column=0, sticky="ew", pady=(0, 14))
         preview_meta = self.tk.Frame(preview_card, bg=COLORS["card"])
         preview_meta.pack(fill="x", padx=14, pady=(4, 10))
@@ -780,7 +912,7 @@ class DesktopApp:
         self._metric_card(summary, "443 占比", self.port_share_var, COLORS["blue_dark"]).grid(row=0, column=1, sticky="ew", padx=6)
         self._metric_card(summary, "备份数量", self.backup_count_var).grid(row=0, column=2, sticky="ew", padx=(12, 0))
 
-        result_card = self._card(page, "ip.txt")
+        result_card = self._card(page, "ip.txt", "最终订阅源内容，格式保持 IP:port#CC。")
         result_card.grid(row=1, column=0, sticky="nsew", padx=(0, 14))
         self.result_list = self.tk.Listbox(result_card, relief="flat", bd=0, bg="#f8fbff", fg=COLORS["text"], font=("Consolas", 10))
         self.result_list.pack(fill="both", expand=True, padx=14, pady=(8, 12))
@@ -789,13 +921,13 @@ class DesktopApp:
         self._primary_button(result_buttons, "刷新结果", self._refresh_results, primary=True).pack(side="left")
         self._primary_button(result_buttons, "打开输出目录", self._open_output_folder).pack(side="left", padx=(10, 0))
 
-        backup_card = self._card(page, "历史备份")
+        backup_card = self._card(page, "历史备份", "恢复会先保护当前 ip.txt，再覆盖为选中版本。")
         backup_card.grid(row=1, column=1, sticky="nsew")
         self.backup_list = self.tk.Listbox(backup_card, relief="flat", bd=0, bg="#f8fbff", fg=COLORS["text"], font=("Microsoft YaHei UI", 9))
         self.backup_list.pack(fill="both", expand=True, padx=14, pady=(8, 12))
         backup_buttons = self.tk.Frame(backup_card, bg=COLORS["card"])
         backup_buttons.pack(fill="x", padx=14, pady=(0, 14))
-        self._primary_button(backup_buttons, "恢复选中备份", self._restore_selected_backup, primary=True).pack(side="left")
+        self._primary_button(backup_buttons, "恢复选中备份", self._restore_selected_backup, variant="danger").pack(side="left")
         self._primary_button(backup_buttons, "刷新备份", self._refresh_backups).pack(side="left", padx=(10, 0))
 
     def _build_settings_page(self) -> None:
@@ -805,7 +937,7 @@ class DesktopApp:
         page.grid_rowconfigure(1, weight=1)
         self.page_frames["settings"] = page
 
-        top = self._card(page, "配置文件")
+        top = self._card(page, "配置文件", "日常只改常用项；完整 JSON 保留在高级页兜底。")
         top.grid(row=0, column=0, sticky="ew", pady=(0, 16))
         top_inner = self.tk.Frame(top, bg=COLORS["card"])
         top_inner.pack(fill="x", padx=14, pady=(8, 14))
@@ -825,7 +957,7 @@ class DesktopApp:
         tabs = self.tk.Frame(body, bg=COLORS["card"])
         tabs.grid(row=0, column=0, sticky="ew", padx=14, pady=(14, 8))
         for group in SETTINGS_FIELD_GROUPS:
-            button = self._primary_button(tabs, group, lambda name=group: self._show_settings_group(name))
+            button = self._primary_button(tabs, group, lambda name=group: self._show_settings_group(name), variant="soft" if group == self.active_settings_group else "secondary")
             button.pack(side="left", padx=(0, 8))
             self.settings_buttons[group] = button
 
@@ -930,10 +1062,13 @@ class DesktopApp:
                 frame.tkraise()
         for name, button in self.settings_buttons.items():
             active = name == group
+            style = BUTTON_VARIANTS["soft" if active else "secondary"]
             button.configure(
-                bg=COLORS["blue"] if active else COLORS["card"],
-                fg="#ffffff" if active else COLORS["text"],
-                activebackground=COLORS["blue_dark"] if active else COLORS["blue_soft"],
+                bg=style["bg"],
+                fg=style["fg"],
+                activebackground=style["activebackground"],
+                activeforeground=style["activeforeground"],
+                highlightbackground=style["border"],
             )
 
     def _browse_config(self) -> None:
@@ -1124,10 +1259,21 @@ class DesktopApp:
     def _refresh_dashboard(self) -> None:
         self._refresh_results()
         self._write_preflight_panel(self._build_current_preflight_report())
-        proxy_url = str(self.config_data.get("GITHUB_SYNC_PROXY_URL", "")).strip()
-        self.github_status_var.set("已配置" if proxy_url else "未配置")
-        proxy_env = [key for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY") if os.environ.get(key)]
-        self.vpn_status_var.set("检测到代理变量" if proxy_env else "请确认 VPN 已断开")
+        cards = build_workbench_status_cards(
+            Path(self.config_path_var.get()).expanduser(),
+            self.config_data,
+        )
+        vpn_card, output_card, github_card = cards
+        self.vpn_status_var.set(vpn_card.value)
+        self.vpn_detail_var.set(vpn_card.detail)
+        self.result_count_var.set(output_card.value)
+        self.result_detail_var.set(f"443 占比 {output_card.detail}")
+        self.github_status_var.set(github_card.value)
+        self.github_detail_var.set(github_card.detail)
+        for key, card in zip(("vpn", "result", "github"), cards):
+            widget = self.status_accent_vars.get(key)
+            if widget is not None:
+                widget.configure(fg=card.accent)
 
     def _refresh_results(self) -> None:
         config_path = Path(self.config_path_var.get()).expanduser()
@@ -1178,7 +1324,7 @@ class DesktopApp:
             self.messagebox.showinfo("未选择备份", "请先选择一份历史备份。")
             return
         backup_path = self.backup_paths[selection[0]]
-        if not self.messagebox.askyesno("恢复备份", f"将用此备份覆盖当前 ip.txt：\n{backup_path.name}\n\n恢复前会先备份当前 ip.txt。继续？"):
+        if not self.messagebox.askyesno("恢复备份", build_restore_confirmation_message(backup_path)):
             return
         try:
             restored_path = restore_output_backup(
