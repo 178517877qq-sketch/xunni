@@ -294,6 +294,44 @@ class DesktopAppHelperTests(unittest.TestCase):
         self.assertEqual("RGBA", icon.mode)
         self.assertGreater(icon.getchannel("A").getextrema()[1], 0)
 
+    def test_cockpit_theme_uses_gradient_background_and_translucent_surfaces(self):
+        theme = desktop_app.COCKPIT_THEME
+
+        self.assertEqual("#eef4f8", theme["background_base"])
+        self.assertTrue(theme["card_fill"].endswith("dd"))
+        self.assertTrue(theme["panel_fill"].endswith("e8"))
+        self.assertGreaterEqual(theme["surface_shadow_blur"], 16)
+
+        background = desktop_app.render_cockpit_background(160, 90)
+        self.assertEqual((160, 90), background.size)
+        self.assertEqual("RGBA", background.mode)
+        self.assertNotEqual(background.getpixel((8, 8)), background.getpixel((150, 80)))
+
+        surface = desktop_app.render_rounded_surface(
+            120,
+            72,
+            theme["card_fill"],
+            theme["card_border"],
+            radius=theme["card_radius"],
+            shadow=True,
+            shadow_alpha=theme["surface_shadow_alpha"],
+            shadow_blur=theme["surface_shadow_blur"],
+        )
+        center_alpha = surface.getpixel((60, 36))[3]
+        self.assertGreater(center_alpha, 190)
+        self.assertLess(center_alpha, 255)
+        self.assertLessEqual(surface.getpixel((0, 0))[3], 8)
+
+    def test_workbench_layout_prioritizes_one_main_task_and_status_summary(self):
+        self.assertEqual(
+            ["main_task", "latest_result"],
+            desktop_app.COCKPIT_WORKBENCH_LAYOUT["left"],
+        )
+        self.assertEqual(
+            ["status_summary", "preflight", "activity_log"],
+            desktop_app.COCKPIT_WORKBENCH_LAYOUT["right"],
+        )
+
     def test_render_badge_image_returns_square_rgba_asset(self):
         image = desktop_app.render_badge_image("RUN", "#2563eb")
 

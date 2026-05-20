@@ -118,6 +118,22 @@ COCKPIT_LAYOUT = {
     "setting_description_wrap": 600,
 }
 
+COCKPIT_THEME = {
+    "background_base": "#eef4f8",
+    "background_top": "#f9fcff",
+    "background_bottom": "#e8f1f8",
+    "background_glow_a": "#dff8f2",
+    "background_glow_b": "#e7efff",
+    "panel_fill": "#ffffffe8",
+    "panel_border": "#ffffff",
+    "card_fill": "#ffffffdd",
+    "card_border": "#ffffffcc",
+    "card_radius": 26,
+    "surface_shadow_alpha": 26,
+    "surface_shadow_blur": 18,
+    "surface_shadow_offset": (0, 10),
+}
+
 PAGE_TAB_STYLE = {
     "width": 126,
     "height": 42,
@@ -140,6 +156,11 @@ PAGE_TAB_ICONS = {
     "results": "list",
     "settings": "sliders",
     "logs": "folder",
+}
+
+COCKPIT_WORKBENCH_LAYOUT = {
+    "left": ["main_task", "latest_result"],
+    "right": ["status_summary", "preflight", "activity_log"],
 }
 
 SETTINGS_FIELD_GROUPS: Dict[str, List[str]] = {
@@ -279,12 +300,12 @@ SETTING_DESCRIPTIONS = {
 }
 
 COLORS = {
-    "bg": "#f5f8fb",
-    "sidebar": "#ffffff",
-    "panel": "#ffffff",
-    "soft_panel": "#f7f9fc",
-    "card": "#ffffff",
-    "border": "#d9e2ee",
+    "bg": "#eef4f8",
+    "sidebar": "#fbfdff",
+    "panel": "#fbfdff",
+    "soft_panel": "#f5f9fd",
+    "card": "#fbfdff",
+    "border": "#dce8f2",
     "text": "#0f172a",
     "muted": "#64748b",
     "muted_light": "#94a3b8",
@@ -309,6 +330,19 @@ def accent_surface(accent: str) -> str:
         COLORS["muted"]: "#e2e8f0",
         "#7c3aed": "#ede9fe",
     }.get(accent, COLORS["blue_soft"])
+
+
+def _color_to_rgba(color: str | tuple[int, int, int] | tuple[int, int, int, int]) -> tuple[int, int, int, int]:
+    if isinstance(color, tuple):
+        if len(color) == 4:
+            return color
+        return (color[0], color[1], color[2], 255)
+    text = str(color).strip()
+    if text.startswith("#") and len(text) == 9:
+        rgb = ImageColor.getrgb(text[:7])
+        return (rgb[0], rgb[1], rgb[2], int(text[7:9], 16))
+    rgb = ImageColor.getrgb(text)
+    return (rgb[0], rgb[1], rgb[2], 255)
 
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
@@ -451,10 +485,42 @@ def render_rounded_surface(
     draw.rounded_rectangle(
         [1, 1, width - 2, height - 2],
         radius=max(1, radius),
-        fill=_hex_to_rgb(fill),
-        outline=_hex_to_rgb(border),
+        fill=_color_to_rgba(fill),
+        outline=_color_to_rgba(border),
         width=1,
     )
+    return image
+
+
+def render_cockpit_background(width: int, height: int) -> Image.Image:
+    width = max(2, int(width))
+    height = max(2, int(height))
+    top = _hex_to_rgb(COCKPIT_THEME["background_top"])
+    bottom = _hex_to_rgb(COCKPIT_THEME["background_bottom"])
+    glow_a = _hex_to_rgb(COCKPIT_THEME["background_glow_a"])
+    glow_b = _hex_to_rgb(COCKPIT_THEME["background_glow_b"])
+
+    image = Image.new("RGBA", (width, height), (*top, 255))
+    draw = ImageDraw.Draw(image)
+    for y in range(height):
+        linear = y / max(1, height - 1)
+        color = _blend_rgb(top, bottom, linear)
+        draw.line([(0, y), (width, y)], fill=(*color, 255))
+
+    for color, alpha, center, scale, blur in (
+        (glow_a, 72, (0.82, 0.08), 0.82, 34),
+        (glow_b, 58, (0.12, 0.78), 0.92, 42),
+    ):
+        overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        radius = max(width, height) * scale
+        cx, cy = width * center[0], height * center[1]
+        overlay_draw.ellipse(
+            [cx - radius, cy - radius, cx + radius, cy + radius],
+            fill=(*color, alpha),
+        )
+        overlay = overlay.filter(ImageFilter.GaussianBlur(max(8, int(min(width, height) / blur))))
+        image = Image.alpha_composite(image, overlay)
     return image
 
 
@@ -545,7 +611,7 @@ BUTTON_VARIANTS = {
         "border": COLORS["blue"],
     },
     "secondary": {
-        "bg": COLORS["card"],
+        "bg": "#ffffff",
         "fg": COLORS["text"],
         "activebackground": COLORS["blue_soft"],
         "activeforeground": COLORS["text"],
@@ -1126,8 +1192,9 @@ class DesktopApp:
         shell.pack(fill="both", expand=True)
         shell.grid_columnconfigure(1, weight=1)
         shell.grid_rowconfigure(0, weight=1)
+        self._install_cockpit_background(shell, "shell")
 
-        sidebar_host = tk.Frame(shell, bg=COLORS["bg"], width=102)
+        sidebar_host = tk.Frame(shell, bg=COCKPIT_THEME["background_base"], width=102)
         sidebar_host.grid(row=0, column=0, sticky="ns")
         sidebar_host.grid_propagate(False)
 
@@ -1179,10 +1246,11 @@ class DesktopApp:
 
         tk.Label(sidebar, text="手动", bg=COLORS["sidebar"], fg=COLORS["muted_light"], font=("Microsoft YaHei UI", 9)).pack(side="bottom", pady=(0, 24))
 
-        main = tk.Frame(shell, bg=COLORS["bg"])
+        main = tk.Frame(shell, bg=COCKPIT_THEME["background_base"])
         main.grid(row=0, column=1, sticky="nsew", padx=(8, 30), pady=22)
         main.grid_columnconfigure(0, weight=1)
         main.grid_rowconfigure(2, weight=1)
+        self._install_cockpit_background(main, "main")
 
         header = tk.Frame(main, bg=COLORS["bg"])
         header.grid(row=0, column=0, sticky="ew", pady=(0, 16))
@@ -1199,8 +1267,8 @@ class DesktopApp:
         banner.grid_propagate(False)
         self._install_rounded_surface(
             banner,
-            fill=COLORS["panel"],
-            border="#d8e1ec",
+            fill=COCKPIT_THEME["panel_fill"],
+            border=COCKPIT_THEME["panel_border"],
             radius=29,
             shadow=True,
             cache_key="top-banner",
@@ -1229,8 +1297,8 @@ class DesktopApp:
         page_switcher.grid_propagate(False)
         self._install_rounded_surface(
             page_switcher,
-            fill=COLORS["panel"],
-            border="#e2e8f0",
+            fill=COCKPIT_THEME["panel_fill"],
+            border=COCKPIT_THEME["panel_border"],
             radius=29,
             shadow=True,
             cache_key="page-switcher",
@@ -1268,9 +1336,9 @@ class DesktopApp:
         )
         self._install_rounded_surface(
             frame,
-            fill=COLORS["card"],
-            border="#d8e1ec",
-            radius=COCKPIT_LAYOUT["card_radius"],
+            fill=COCKPIT_THEME["card_fill"],
+            border=COCKPIT_THEME["card_border"],
+            radius=COCKPIT_THEME["card_radius"],
             shadow=True,
             cache_key=f"card-{id(frame)}",
         )
@@ -1298,9 +1366,9 @@ class DesktopApp:
         widget._surface_border = border
         widget._surface_radius = radius
         widget._surface_shadow = shadow
-        widget._surface_shadow_alpha = 34 if shadow else 0
-        widget._surface_shadow_offset = (4, 6)
-        widget._surface_shadow_blur = 9
+        widget._surface_shadow_alpha = COCKPIT_THEME["surface_shadow_alpha"] if shadow else 0
+        widget._surface_shadow_offset = COCKPIT_THEME["surface_shadow_offset"]
+        widget._surface_shadow_blur = COCKPIT_THEME["surface_shadow_blur"]
         widget._surface_cache_key = cache_key or f"surface-{id(widget)}"
 
         def redraw(_event: Any | None = None) -> None:
@@ -1330,6 +1398,29 @@ class DesktopApp:
             bg_label.image = photo
 
         widget._surface_redraw = redraw
+        widget.bind("<Configure>", redraw, add="+")
+        redraw()
+
+    def _install_cockpit_background(self, widget: Any, cache_key: str) -> None:
+        bg_label = self.tk.Label(widget, bg=COCKPIT_THEME["background_base"], bd=0, highlightthickness=0)
+        bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+        bg_label.lower()
+        widget._cockpit_bg_label = bg_label
+
+        def redraw(_event: Any | None = None) -> None:
+            width = max(2, widget.winfo_width())
+            height = max(2, widget.winfo_height())
+            if width < 4 or height < 4:
+                return
+            image = render_cockpit_background(width, height)
+            photo_key = f"cockpit-bg-{cache_key}:{width}x{height}"
+            photo = ImageTk.PhotoImage(image, master=self.root)
+            self.surface_images[photo_key] = photo
+            bg_label.configure(image=photo)
+            bg_label.image = photo
+            bg_label.lower()
+
+        widget._cockpit_bg_redraw = redraw
         widget.bind("<Configure>", redraw, add="+")
         redraw()
 
@@ -1812,6 +1903,57 @@ class DesktopApp:
         chip.value_label = value_label
         return chip
 
+    def _status_row(
+        self,
+        parent: Any,
+        title: str,
+        variable: Any,
+        detail_variable: Any | None,
+        accent: str,
+        icon: str,
+    ) -> Any:
+        row = self.tk.Frame(parent, bg=COLORS["card"], height=58)
+        row.grid_propagate(False)
+        row.grid_columnconfigure(1, weight=1)
+        badge = self._badge_photo(
+            f"status-row-{title}-{icon}",
+            icon,
+            accent,
+            size=34,
+            background=accent_surface(accent),
+        )
+        icon_label = self.tk.Label(row, image=badge, bg=COLORS["card"], bd=0)
+        icon_label.image = badge
+        icon_label.grid(row=0, column=0, rowspan=2, sticky="w", padx=(0, 12), pady=12)
+        self.tk.Label(row, text=title, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 8, "bold")).grid(row=0, column=1, sticky="sw")
+        value_label = self.tk.Label(row, textvariable=variable, bg=COLORS["card"], fg=accent, font=("Microsoft YaHei UI", 11, "bold"), anchor="w")
+        value_label.grid(row=1, column=1, sticky="nw", pady=(2, 0))
+        if detail_variable is not None:
+            detail_label = self.tk.Label(row, textvariable=detail_variable, bg=COLORS["card"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 8), anchor="e", justify="right", wraplength=170)
+            detail_label.grid(row=0, column=2, rowspan=2, sticky="e", padx=(12, 0))
+        row.value_label = value_label
+        return row
+
+    def _build_status_summary_card(self, parent: Any) -> Any:
+        card = self._card(parent, "当前状态")
+        body = self.tk.Frame(card, bg=COLORS["card"])
+        body.pack(fill="x", padx=18, pady=(8, 18))
+        body.grid_columnconfigure(0, weight=1)
+        rows = [
+            ("vpn", "VPN/代理", self.vpn_status_var, self.vpn_detail_var, COLORS["red"], "VPN"),
+            ("result", "当前 ip.txt", self.result_count_var, self.output_updated_var, COLORS["blue_dark"], "IP"),
+            ("share", "443 占比", self.port_share_var, self.result_detail_var, COLORS["teal"], "443"),
+            ("github", "GitHub", self.github_status_var, self.github_detail_var, COLORS["green"], "GH"),
+        ]
+        for index, (key, title, variable, detail, accent, icon) in enumerate(rows):
+            row = self._status_row(body, title, variable, detail, accent, icon)
+            row.grid(row=index * 2, column=0, sticky="ew")
+            if key in {"vpn", "result", "github"}:
+                self.status_accent_vars[key] = row.value_label
+            if index < len(rows) - 1:
+                self.tk.Frame(body, bg="#e8eef6", height=1).grid(row=index * 2 + 1, column=0, sticky="ew", pady=6)
+        return card
+
     def _build_compact_tool_button(self, parent: Any, action: WorkbenchAction, command: Callable[[], None]) -> Any:
         variant = "danger" if action.key == "stop_task" else "secondary"
         label = f"{action.icon}  {action.label}" if action.key != "open_output_folder" else action.label
@@ -1850,31 +1992,16 @@ class DesktopApp:
         return card
 
     def _build_workbench_page(self) -> None:
-        page = self.tk.Frame(self.content_host, bg=COLORS["bg"])
+        page = self.tk.Frame(self.content_host, bg=COCKPIT_THEME["background_base"])
         page.grid(row=0, column=0, sticky="nsew")
+        self._install_cockpit_background(page, "workbench")
         page.grid_columnconfigure(0, weight=5)
         page.grid_columnconfigure(1, weight=3)
-        page.grid_rowconfigure(2, weight=1)
+        page.grid_rowconfigure(0, weight=1)
         self.page_frames["workbench"] = page
 
-        status_strip = self.tk.Frame(page, bg=COLORS["bg"])
-        status_strip.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 14))
-        for col in range(4):
-            status_strip.grid_columnconfigure(col, weight=1, uniform="status-strip")
-        vpn_chip = self._status_chip(status_strip, "VPN/代理", self.vpn_status_var, self.vpn_detail_var, COLORS["red"], "VPN")
-        vpn_chip.grid(row=0, column=0, sticky="ew", padx=(0, 8))
-        self.status_accent_vars["vpn"] = vpn_chip.value_label
-        result_chip = self._status_chip(status_strip, "当前 ip.txt", self.result_count_var, self.output_updated_var, COLORS["blue_dark"], "IP")
-        result_chip.grid(row=0, column=1, sticky="ew", padx=8)
-        self.status_accent_vars["result"] = result_chip.value_label
-        share_chip = self._status_chip(status_strip, "443 占比", self.port_share_var, self.result_detail_var, COLORS["teal"], "443")
-        share_chip.grid(row=0, column=2, sticky="ew", padx=8)
-        github_chip = self._status_chip(status_strip, "GitHub", self.github_status_var, self.github_detail_var, COLORS["green"], "GH")
-        github_chip.grid(row=0, column=3, sticky="ew", padx=(8, 0))
-        self.status_accent_vars["github"] = github_chip.value_label
-
-        left = self.tk.Frame(page, bg=COLORS["bg"])
-        left.grid(row=1, column=0, rowspan=2, sticky="nsew", padx=(0, 14))
+        left = self.tk.Frame(page, bg=COCKPIT_THEME["background_base"])
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 14))
         left.grid_rowconfigure(2, weight=1)
         left.grid_columnconfigure(0, weight=1)
 
@@ -1901,32 +2028,36 @@ class DesktopApp:
         self.result_preview_list = self.tk.Listbox(preview_card, height=8, relief="flat", bd=0, bg="#f8fbff", fg=COLORS["text"], font=("Consolas", 10))
         self.result_preview_list.pack(fill="both", expand=True, padx=18, pady=(0, 18))
 
-        right = self.tk.Frame(page, bg=COLORS["bg"])
-        right.grid(row=1, column=1, rowspan=2, sticky="nsew")
+        right = self.tk.Frame(page, bg=COCKPIT_THEME["background_base"])
+        right.grid(row=0, column=1, sticky="nsew")
         right.grid_columnconfigure(0, weight=1)
-        right.grid_rowconfigure(1, weight=1)
+        right.grid_rowconfigure(2, weight=1)
+
+        status_card = self._build_status_summary_card(right)
+        status_card.grid(row=0, column=0, sticky="ew", pady=(0, 14))
 
         preflight_card = self._card(right, "运行前检查")
-        preflight_card.grid(row=0, column=0, sticky="nsew", pady=(0, 14))
-        self.preflight_text = self.scrolledtext.ScrolledText(preflight_card, wrap="word", height=16, state="disabled", relief="flat", bg="#f8fbff")
+        preflight_card.grid(row=1, column=0, sticky="nsew", pady=(0, 14))
+        self.preflight_text = self.scrolledtext.ScrolledText(preflight_card, wrap="word", height=10, state="disabled", relief="flat", bg="#f8fbff")
         self.preflight_text.pack(fill="both", expand=True, padx=18, pady=(8, 18))
 
         log_card = self._card(right, "运行日志")
-        log_card.grid(row=1, column=0, sticky="nsew")
+        log_card.grid(row=2, column=0, sticky="nsew")
         log_card.grid_rowconfigure(1, weight=1)
         log_card.grid_columnconfigure(0, weight=1)
         self.dashboard_log_text = self.scrolledtext.ScrolledText(log_card, wrap="word", height=8, state="disabled", relief="flat", bg="#f8fbff")
         self.dashboard_log_text.pack(fill="both", expand=True, padx=18, pady=(8, 18))
 
     def _build_results_page(self) -> None:
-        page = self.tk.Frame(self.content_host, bg=COLORS["bg"])
+        page = self.tk.Frame(self.content_host, bg=COCKPIT_THEME["background_base"])
         page.grid(row=0, column=0, sticky="nsew")
+        self._install_cockpit_background(page, "results")
         page.grid_columnconfigure(0, weight=3)
         page.grid_columnconfigure(1, weight=2)
         page.grid_rowconfigure(1, weight=1)
         self.page_frames["results"] = page
 
-        summary = self.tk.Frame(page, bg=COLORS["bg"])
+        summary = self.tk.Frame(page, bg=COCKPIT_THEME["background_base"])
         summary.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 16))
         for col in range(3):
             summary.grid_columnconfigure(col, weight=1, uniform="result-metrics")
@@ -1953,8 +2084,9 @@ class DesktopApp:
         self._primary_button(backup_buttons, "刷新备份", self._refresh_backups).pack(side="left", padx=(10, 0))
 
     def _build_settings_page(self) -> None:
-        page = self.tk.Frame(self.content_host, bg=COLORS["bg"])
+        page = self.tk.Frame(self.content_host, bg=COCKPIT_THEME["background_base"])
         page.grid(row=0, column=0, sticky="nsew")
+        self._install_cockpit_background(page, "settings")
         page.grid_columnconfigure(0, weight=1)
         page.grid_rowconfigure(1, weight=1)
         self.page_frames["settings"] = page
@@ -2109,8 +2241,9 @@ class DesktopApp:
         self.raw_text.grid(row=1, column=0, sticky="nsew")
 
     def _build_logs_page(self) -> None:
-        page = self.tk.Frame(self.content_host, bg=COLORS["bg"])
+        page = self.tk.Frame(self.content_host, bg=COCKPIT_THEME["background_base"])
         page.grid(row=0, column=0, sticky="nsew")
+        self._install_cockpit_background(page, "logs")
         page.grid_columnconfigure(0, weight=2)
         page.grid_columnconfigure(1, weight=1)
         page.grid_rowconfigure(0, weight=1)
