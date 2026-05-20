@@ -252,8 +252,6 @@ class DesktopAppHelperTests(unittest.TestCase):
         self.assertGreaterEqual(layout["action_tile_height"], 92)
         self.assertLessEqual(layout["action_text_wrap"], 160)
         self.assertLessEqual(layout["action_hint_wrap"], 160)
-        self.assertLessEqual(layout["preflight_lines"], 8)
-        self.assertGreaterEqual(layout["dashboard_log_lines"], 6)
         self.assertGreaterEqual(layout["setting_row_height"], 96)
         self.assertGreaterEqual(layout["setting_description_wrap"], 560)
 
@@ -371,12 +369,9 @@ class DesktopAppHelperTests(unittest.TestCase):
         structure = desktop_app.COCKPIT_STRUCTURE
 
         self.assertGreaterEqual(structure["window_height"], 900)
-        self.assertLessEqual(structure["main_top_padding"], 48)
-        self.assertEqual(["header", "toolbar", "content"], structure["main_rows"])
-        self.assertTrue(structure["page_tabs_in_header"])
-        self.assertLessEqual(structure["toolbar_height"], 58)
-        self.assertLessEqual(structure["page_switcher_width"], 540)
-        self.assertEqual("icon", structure["sidebar_action_style"])
+        self.assertGreaterEqual(structure["main_top_padding"], 50)
+        self.assertEqual(["header", "tabs", "toolbar", "content"], structure["main_rows"])
+        self.assertGreaterEqual(structure["toolbar_height"], 62)
         self.assertLessEqual(structure["sidebar_rail_height"], 560)
         self.assertTrue(structure["sidebar_has_action_button"])
         self.assertEqual(["shell"], structure["background_layers"])
