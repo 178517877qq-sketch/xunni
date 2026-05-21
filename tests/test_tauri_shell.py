@@ -29,6 +29,7 @@ class TauriShellTests(unittest.TestCase):
         self.assertEqual(1280, window["width"])
         self.assertEqual(800, window["height"])
         self.assertTrue(window["resizable"])
+        self.assertEqual("http://127.0.0.1:5173", config["build"]["devUrl"])
         self.assertEqual("../dist", config["build"]["frontendDist"])
 
     def test_frontend_maps_manual_workflow_to_existing_python_cli(self):
@@ -49,6 +50,8 @@ class TauriShellTests(unittest.TestCase):
         self.assertIn("glass-panel", app)
         self.assertIn("sidebar-rail", app)
         self.assertIn("rounded-[32px]", app)
+        self.assertIn("aria-label={`侧栏-${item.label}`}", app)
+        self.assertIn('aria-current={activePage === item.id ? "page" : undefined}', app)
         self.assertIn("box-shadow", css)
         self.assertIn("linear-gradient", css)
 

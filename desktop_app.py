@@ -4,6 +4,7 @@ import json
 import os
 import queue
 import shutil
+import socket
 import subprocess
 import sys
 import threading
@@ -22,8 +23,9 @@ DEFAULT_CONFIG_PATH = Path(__file__).resolve().with_name("config.json")
 MAIN_SCRIPT_PATH = Path(__file__).resolve().with_name("main.py")
 PROJECT_ROOT = Path(__file__).resolve().parent
 MODERN_DESKTOP_HOST = "127.0.0.1"
-MODERN_DESKTOP_PORT = 1420
+MODERN_DESKTOP_PORT = 5173
 MODERN_DESKTOP_URL = f"http://{MODERN_DESKTOP_HOST}:{MODERN_DESKTOP_PORT}"
+MODERN_DESKTOP_PORT_CANDIDATES = (MODERN_DESKTOP_PORT, 1420, 5174, 4173)
 
 
 @dataclass(frozen=True)
@@ -210,25 +212,62 @@ def _npm_command(which: Callable[[str], Optional[str]] = shutil.which) -> str:
     return candidates[-1]
 
 
+def _modern_desktop_url(port: int = MODERN_DESKTOP_PORT) -> str:
+    return f"http://{MODERN_DESKTOP_HOST}:{port}"
+
+
+def is_port_bindable(port: int, host: str = MODERN_DESKTOP_HOST) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            probe.bind((host, port))
+        except OSError:
+            return False
+    return True
+
+
+def is_modern_ui_ready(url: str = MODERN_DESKTOP_URL, timeout: float = 0.5) -> bool:
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            body = response.read(4096).decode("utf-8", errors="ignore")
+            return "cfnb 手动优选工具" in body
+    except (OSError, urllib.error.URLError, UnicodeDecodeError):
+        return False
+
+
+def pick_modern_desktop_port(candidates: Sequence[int] = MODERN_DESKTOP_PORT_CANDIDATES) -> int:
+    for port in candidates:
+        if is_modern_ui_ready(_modern_desktop_url(port)):
+            return port
+        if is_port_bindable(port):
+            return port
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind((MODERN_DESKTOP_HOST, 0))
+        return int(probe.getsockname()[1])
+
+
 def resolve_modern_desktop_strategy(
     which: Callable[[str], Optional[str]] = shutil.which,
 ) -> ModernDesktopLaunch:
     npm = _npm_command(which)
     if which("cargo") and which("rustc"):
         return ModernDesktopLaunch("tauri", [npm, "run", "tauri", "dev"], MODERN_DESKTOP_URL)
+    port = pick_modern_desktop_port()
+    url = _modern_desktop_url(port)
     return ModernDesktopLaunch(
         "web-app",
         [
             npm,
-            "run",
-            "dev",
+            "exec",
             "--",
+            "vite",
             "--host",
             MODERN_DESKTOP_HOST,
             "--port",
-            str(MODERN_DESKTOP_PORT),
+            str(port),
         ],
-        MODERN_DESKTOP_URL,
+        url,
     )
 
 
@@ -243,7 +282,7 @@ def is_local_url_ready(url: str = MODERN_DESKTOP_URL, timeout: float = 0.5) -> b
 def wait_for_local_url(url: str = MODERN_DESKTOP_URL, timeout_seconds: float = 25.0) -> bool:
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
-        if is_local_url_ready(url):
+        if is_modern_ui_ready(url):
             return True
         time.sleep(0.35)
     return False
@@ -281,7 +320,7 @@ def launch_modern_desktop(project_root: Path = PROJECT_ROOT) -> ModernDesktopLau
         )
         return strategy
 
-    if not is_local_url_ready(strategy.url):
+    if not is_modern_ui_ready(strategy.url):
         log_path = project_root / "desktop_ui.log"
         log_file = log_path.open("ab")
         subprocess.Popen(

@@ -265,9 +265,21 @@ class DesktopAppHelperTests(unittest.TestCase):
         strategy = desktop_app.resolve_modern_desktop_strategy(which=fake_which)
 
         self.assertEqual("web-app", strategy.kind)
-        self.assertIn("dev", strategy.command)
+        self.assertIn("vite", strategy.command)
         self.assertIn("--port", strategy.command)
-        self.assertEqual(desktop_app.MODERN_DESKTOP_URL, strategy.url)
+        self.assertTrue(strategy.url.startswith("http://127.0.0.1:"))
+
+    def test_modern_desktop_port_picker_skips_blocked_default_port(self):
+        original_ready = desktop_app.is_modern_ui_ready
+        original_bindable = desktop_app.is_port_bindable
+        try:
+            desktop_app.is_modern_ui_ready = lambda url, timeout=0.5: False
+            desktop_app.is_port_bindable = lambda port, host=desktop_app.MODERN_DESKTOP_HOST: port == 5174
+
+            self.assertEqual(5174, desktop_app.pick_modern_desktop_port([5173, 1420, 5174]))
+        finally:
+            desktop_app.is_modern_ui_ready = original_ready
+            desktop_app.is_port_bindable = original_bindable
 
     def test_cockpit_layout_tokens_prevent_square_blocks_and_text_clipping(self):
         layout = desktop_app.COCKPIT_LAYOUT

@@ -749,6 +749,7 @@ function App() {
               <button
                 key={item.id}
                 className={clsx("sidebar-item", activePage === item.id && "active")}
+                aria-label={`侧栏-${item.label}`}
                 title={item.label}
                 onClick={() => setActivePage(item.id)}
               >
@@ -771,7 +772,12 @@ function App() {
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
-                <button key={item.id} className={clsx("page-tab", activePage === item.id && "active")} onClick={() => setActivePage(item.id)}>
+                <button
+                  key={item.id}
+                  className={clsx("page-tab", activePage === item.id && "active")}
+                  aria-current={activePage === item.id ? "page" : undefined}
+                  onClick={() => setActivePage(item.id)}
+                >
                   <Icon size={16} />
                   <span>{item.label}</span>
                 </button>
