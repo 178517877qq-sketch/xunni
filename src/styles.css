@@ -51,8 +51,8 @@ body,
 body {
   overflow: hidden;
   color: var(--text-primary);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -246,20 +246,20 @@ textarea:focus-visible {
   display: grid;
   grid-template-columns: minmax(240px, 1fr) auto minmax(240px, 1fr);
   align-items: center;
-  gap: 18px;
+  gap: 14px;
 }
 
 .page-title-main {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
-  line-height: 1.12;
+  line-height: 1.14;
 }
 
 .page-subtitle-main {
-  margin-top: 4px;
-  font-size: 13px;
-  line-height: 1.35;
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.3;
 }
 
 .page-tabs,
@@ -273,29 +273,29 @@ textarea:focus-visible {
 }
 
 .page-tabs {
-  height: 56px;
-  padding: 7px;
+  height: 48px;
+  padding: 5px;
   display: flex;
   align-items: center;
   gap: 8px;
-  border-radius: 24px;
+  border-radius: 18px;
 }
 
 .page-tab {
   position: relative;
   isolation: isolate;
-  min-width: 124px;
-  height: 42px;
-  padding: 0 15px;
+  min-width: 108px;
+  height: 36px;
+  padding: 0 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   border: 0;
-  border-radius: 16px;
+  border-radius: 14px;
   color: var(--text-secondary);
   background: transparent;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
   transition:
@@ -307,20 +307,20 @@ textarea:focus-visible {
 .page-tab::before {
   content: "";
   position: absolute;
-  inset: 2px;
+  inset: 1px;
   z-index: -1;
   border-radius: inherit;
   background: var(--edge-glow);
   opacity: 0;
-  filter: blur(10px);
+  filter: blur(8px);
   transition: opacity 220ms var(--motion-ease), transform 220ms var(--motion-ease);
 }
 
 .page-tab:hover {
   color: var(--text-primary);
   background: var(--bg-hover);
-  transform: translateY(-1px) scale(1.04);
-  box-shadow: 0 12px 24px -18px rgba(29, 78, 216, 0.4);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 10px 20px -16px rgba(29, 78, 216, 0.34);
 }
 
 .page-tab:hover::before {
@@ -350,9 +350,9 @@ textarea:focus-visible {
 
 .notice-pill {
   justify-self: end;
-  height: 46px;
-  min-width: 236px;
-  padding: 5px 7px;
+  height: 42px;
+  min-width: 216px;
+  padding: 4px 6px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -360,18 +360,18 @@ textarea:focus-visible {
 }
 
 .notice-pill span {
-  padding: 7px 11px;
+  padding: 6px 10px;
   border-radius: 999px;
   background: rgba(29, 78, 216, 0.12);
   color: var(--primary);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   line-height: 1;
 }
 
 .notice-pill strong {
   min-width: 0;
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -392,18 +392,19 @@ textarea:focus-visible {
 
 .notice-pill button {
   margin-left: auto;
-  min-width: 68px;
-  padding: 7px 12px;
+  min-width: 60px;
+  padding: 6px 10px;
+  font-size: 12px;
 }
 
 .workflow-strip {
-  margin-top: 18px;
-  min-height: 54px;
-  padding: 8px 9px 8px 16px;
+  margin-top: 14px;
+  min-height: 46px;
+  padding: 7px 8px 7px 14px;
   display: flex;
   align-items: center;
-  gap: 18px;
-  border-radius: 22px;
+  gap: 14px;
+  border-radius: 18px;
   box-shadow: var(--bar-shadow);
 }
 
@@ -419,14 +420,14 @@ textarea:focus-visible {
   gap: 8px;
   min-width: 0;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .workflow-strip span svg {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
   padding: 2px;
   border-radius: 999px;
   color: var(--primary);
@@ -472,12 +473,12 @@ textarea:focus-visible {
 
 .glass-panel {
   overflow: hidden;
-  border-radius: 24px;
+  border-radius: 20px;
   box-shadow: var(--panel-shadow);
 }
 
 .workbench-main {
-  padding: 20px !important;
+  padding: 18px !important;
 }
 
 .workbench-status,
@@ -485,21 +486,21 @@ textarea:focus-visible {
 .workbench-preflight,
 .workbench-latest,
 .workbench-log {
-  padding: 18px !important;
+  padding: 16px !important;
 }
 
 .glass-panel.rounded-\[32px\],
 .glass-panel.rounded-\[30px\],
 .glass-panel.rounded-\[28px\] {
-  border-radius: 24px;
+  border-radius: 20px;
 }
 
 .section-title {
   margin: 0;
-  font-size: 16.5px;
+  font-size: 15.5px;
   font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.28;
+  line-height: 1.24;
 }
 
 .task-head {
@@ -507,75 +508,75 @@ textarea:focus-visible {
 }
 
 .task-logo {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   flex: 0 0 auto;
-  border-radius: 16px;
-  font-size: 18px;
+  border-radius: 14px;
+  font-size: 16px;
   line-height: 1;
 }
 
 .task-title {
   margin: 0;
-  font-size: 21px;
+  font-size: 19px;
   font-weight: 700;
-  line-height: 1.22;
+  line-height: 1.18;
 }
 
 .task-subtitle {
-  margin-top: 5px;
-  font-size: 13px;
-  line-height: 1.35;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.3;
 }
 
 .manual-badge {
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 5px 10px;
+  font-size: 11px;
   line-height: 1.2;
   white-space: nowrap;
 }
 
 .action-grid {
-  margin-top: 20px !important;
-  gap: 12px !important;
+  margin-top: 16px !important;
+  gap: 10px !important;
 }
 
 .tool-grid {
-  margin-top: 12px !important;
-  gap: 10px !important;
+  margin-top: 10px !important;
+  gap: 8px !important;
 }
 
 .workbench-latest p,
 .results-grid article > p {
-  margin-top: 6px !important;
-  font-size: 13px !important;
+  margin-top: 5px !important;
+  font-size: 12px !important;
   line-height: 1.45;
 }
 
 .workbench-latest .flex.flex-wrap,
 .results-grid article > .flex.flex-wrap {
-  margin-top: 12px !important;
-  gap: 18px !important;
-  font-size: 13px !important;
+  margin-top: 10px !important;
+  gap: 14px !important;
+  font-size: 12px !important;
 }
 
 .workbench-latest strong,
 .results-grid article strong {
-  font-size: 15px !important;
+  font-size: 14px !important;
 }
 
 .action-tile {
   position: relative;
   isolation: isolate;
-  min-height: 84px;
+  min-height: 80px;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 10px;
   align-items: center;
   border: 1px solid var(--border-light);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.78);
-  padding: 12px;
+  padding: 10px;
   text-align: left;
   box-shadow: var(--shadow-sm);
   overflow: visible;
@@ -589,20 +590,20 @@ textarea:focus-visible {
 .action-tile::before {
   content: "";
   position: absolute;
-  inset: 3px;
+  inset: 2px;
   z-index: -1;
   border-radius: inherit;
   background: var(--edge-glow);
   opacity: 0;
-  filter: blur(10px);
+  filter: blur(8px);
   transition: opacity 220ms var(--motion-ease), transform 220ms var(--motion-ease);
 }
 
 .action-tile:hover {
-  transform: translateY(-1px) scale(1.01);
+  transform: translateY(-1px) scale(1.008);
   border-color: rgba(29, 78, 216, 0.3);
   background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 14px 28px -22px rgba(29, 78, 216, 0.42), var(--shadow-sm);
+  box-shadow: 0 12px 24px -20px rgba(29, 78, 216, 0.36), var(--shadow-sm);
 }
 
 .action-tile:hover::before {
@@ -617,28 +618,28 @@ textarea:focus-visible {
 .action-title {
   display: block;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 650;
-  line-height: 1.3;
+  line-height: 1.24;
 }
 
 .action-hint {
   display: block;
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 11px;
+  line-height: 1.3;
 }
 
 .icon-badge {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
 }
 
 .icon-badge svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .action-tile svg,
@@ -849,8 +850,8 @@ textarea:focus-visible {
 
 .settings-row,
 .settings-line {
-  margin-top: 12px;
-  min-height: 56px;
+  margin-top: 10px;
+  min-height: 52px;
   display: grid;
   grid-template-columns: minmax(160px, 0.45fr) minmax(260px, 1fr) auto auto;
   gap: 12px;
@@ -859,7 +860,7 @@ textarea:focus-visible {
 
 .settings-row strong,
 .settings-line strong {
-  font-size: 14px;
+  font-size: 13px;
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -867,7 +868,7 @@ textarea:focus-visible {
 .settings-row span,
 .settings-line span {
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12px;
   min-width: 0;
 }
 
@@ -875,19 +876,20 @@ textarea:focus-visible {
 .settings-line small {
   display: block;
   margin-top: 2px;
-  line-height: 1.35;
+  line-height: 1.3;
   color: var(--text-muted);
+  font-size: 11px;
   overflow-wrap: anywhere;
 }
 
 .settings-row button,
 .settings-tabs button {
   border: 1px solid var(--border-light);
-  border-radius: 12px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.82);
-  min-height: 34px;
-  padding: 0 14px;
-  font-size: 13px;
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
   font-weight: 650;
 }
 
@@ -897,16 +899,16 @@ textarea:focus-visible {
   gap: 8px;
   width: max-content;
   max-width: 100%;
-  margin: 0 auto 16px;
-  padding: 6px;
+  margin: 0 auto 14px;
+  padding: 5px;
   border: 1px solid var(--border-light);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--bg-card);
   box-shadow: var(--shadow-sm);
 }
 
 .settings-tabs button {
-  min-width: 76px;
+  min-width: 70px;
   border: 0;
   background: transparent;
   color: var(--text-secondary);
@@ -919,7 +921,7 @@ textarea:focus-visible {
 .settings-tabs button:hover {
   color: var(--text-primary);
   background: var(--bg-hover);
-  transform: scale(1.03);
+  transform: scale(1.02);
 }
 
 .settings-tabs button.active {
@@ -930,19 +932,19 @@ textarea:focus-visible {
 .settings-line {
   grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
   align-items: start;
-  padding: 13px 0;
+  padding: 11px 0;
   border-top: 1px solid rgba(226, 232, 240, 0.86);
 }
 
 .settings-line input {
   width: 100%;
   border: 1px solid rgba(148, 163, 184, 0.34);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--bg-field);
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: 34px;
+  padding: 0 12px;
   text-align: left;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-primary);
 }
 
@@ -957,14 +959,14 @@ textarea:focus-visible {
 }
 
 .setting-toggle {
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: 34px;
+  padding: 0 12px;
   display: inline-flex;
   align-items: center;
   gap: 10px;
   justify-content: space-between;
   border: 1px solid rgba(148, 163, 184, 0.34);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--bg-field);
 }
 
@@ -975,7 +977,7 @@ textarea:focus-visible {
 }
 
 .editor-shell {
-  margin-top: 12px;
+  margin-top: 8px;
   display: grid;
   gap: 12px;
 }
@@ -985,57 +987,57 @@ textarea:focus-visible {
   align-items: center;
   gap: 10px;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 800;
 }
 
 .json-editor {
   width: 100%;
-  min-height: 360px;
+  min-height: 320px;
   border: 1px solid rgba(148, 163, 184, 0.34);
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--bg-field);
-  padding: 12px;
+  padding: 11px;
   color: var(--text-primary);
   font-family: "Cascadia Mono", Consolas, monospace;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 11px;
+  line-height: 1.45;
   resize: vertical;
 }
 
 .help-flow p {
   margin: 0 0 10px;
   color: #334155;
-  font-size: 13px;
-  line-height: 1.62;
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .status-row {
-  min-height: 60px;
+  min-height: 58px;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) minmax(96px, auto);
+  grid-template-columns: 38px minmax(0, 1fr) minmax(96px, auto);
   align-items: center;
-  gap: 12px;
-  padding: 9px 0;
+  gap: 10px;
+  padding: 8px 0;
 }
 
 .status-label {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1.2;
 }
 
 .status-value {
   margin-top: 3px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.25;
 }
 
 .status-detail {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.35;
 }
 
@@ -1048,7 +1050,7 @@ textarea:focus-visible {
 }
 
 .empty-log {
-  min-height: 72px;
+  min-height: 66px;
   display: grid;
   place-items: center;
   color: var(--text-muted);
@@ -1091,9 +1093,9 @@ textarea:focus-visible {
 }
 
 .state-banner {
-  margin-top: 12px;
-  padding: 10px 14px;
-  border-radius: 14px;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: 12px;
   border: 1px solid var(--border-light);
   background: var(--bg-card-strong);
   color: var(--text-primary);
@@ -1108,9 +1110,71 @@ textarea:focus-visible {
 }
 
 .page-stage {
-  margin-top: 20px;
+  margin-top: 16px;
   padding-bottom: 30px;
   animation: page-rise 260ms var(--motion-ease);
+}
+
+.page-stage--compact {
+  margin-top: 12px;
+}
+
+.settings-layout {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-shell {
+  padding: 14px !important;
+}
+
+.settings-shell-meta {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.settings-meta-block {
+  min-width: 0;
+}
+
+.settings-meta-block span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.settings-meta-block strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.settings-meta-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.settings-meta-actions .secondary-button,
+.settings-meta-actions .soft-button {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.settings-fields--compact {
+  margin-top: 2px;
 }
 
 @keyframes page-rise {
@@ -1157,6 +1221,15 @@ textarea:focus-visible {
     flex-wrap: wrap;
     height: auto;
   }
+
+  .settings-shell-meta {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .settings-meta-actions {
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1190,7 +1263,7 @@ textarea:focus-visible {
   }
 
   .topbar h1 {
-    font-size: 24px;
+    font-size: 22px;
     line-height: 1.2;
   }
 

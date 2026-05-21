@@ -409,35 +409,30 @@ function SettingsPage({
   );
 
   return (
-    <div className="space-y-5">
-      <article className="glass-panel rounded-[30px] p-5">
-        <h3 className="section-title">配置文件</h3>
-        <div className="settings-row">
-          <span>
-            <strong>路径</strong>
-            <small>当前 config.json 位置</small>
-          </span>
-          <strong>{state.config_path}</strong>
-          <button className="soft-button" onClick={onLoad} disabled={busyAction === "refresh"}>
-            加载
-          </button>
-          <button className="secondary-button" onClick={onSave} disabled={busyAction === "save"}>
-            保存
-          </button>
+    <div className="settings-layout">
+      <article className="glass-panel settings-shell rounded-[30px] p-5">
+        <div className="settings-shell-meta">
+          <div className="settings-meta-block">
+            <span>配置文件</span>
+            <strong className="truncate">{state.config_path}</strong>
+          </div>
+          <div className="settings-meta-block">
+            <span>Python</span>
+            <strong className="truncate">{state.python_exe}</strong>
+          </div>
+          <div className="settings-meta-actions">
+            <button className="soft-button" onClick={onLoad} disabled={busyAction === "refresh"}>
+              加载
+            </button>
+            <button className="secondary-button" onClick={onSave} disabled={busyAction === "save"}>
+              保存
+            </button>
+            <button className="secondary-button" onClick={onOpenConfigFolder}>
+              浏览
+            </button>
+          </div>
         </div>
-        <div className="settings-row">
-          <span>
-            <strong>Python</strong>
-            <small>当前运行解释器</small>
-          </span>
-          <strong className="truncate">{state.python_exe}</strong>
-          <button className="secondary-button" onClick={onOpenConfigFolder}>
-            浏览
-          </button>
-        </div>
-      </article>
 
-      <article className="glass-panel rounded-[30px] p-5">
         <div className="settings-tabs">
           {settingsTabs.map((tab) => (
             <button key={tab} className={clsx(tab === activeSettingsTab && "active")} onClick={() => setActiveSettingsTab(tab)}>
@@ -460,7 +455,7 @@ function SettingsPage({
             />
           </div>
         ) : (
-          <div className="settings-fields">
+          <div className="settings-fields settings-fields--compact">
             {activeFieldSpecs.map((spec) => (
               <SettingRow
                 key={spec.name}
@@ -526,6 +521,7 @@ function App() {
   const proxyUrl = String(desktopState.config.GITHUB_SYNC_PROXY_URL ?? "").trim();
   const canRunNative = isDesktopRuntime();
   const openConfigFolderTarget = useMemo(() => parentPath(desktopState.config_path), [desktopState.config_path]);
+  const isWorkbenchPage = activePage === "workbench";
 
   function pushLog(text: string, tone: LogTone = "info") {
     setActivityLog((current) => [{ time: nowLabel(), text, tone }, ...current].slice(0, 12));
@@ -761,7 +757,7 @@ function App() {
         <header className="topbar">
           <div>
             <h1 className="page-title-main tracking-normal text-blue-700">{pageTitles[activePage]}</h1>
-            <p className="page-subtitle-main text-slate-500">配置已加载 · 手动工具模式</p>
+            {isWorkbenchPage ? <p className="page-subtitle-main text-slate-500">配置已加载 · 手动工具模式</p> : null}
           </div>
 
           <nav className="page-tabs">
@@ -781,50 +777,54 @@ function App() {
             })}
           </nav>
 
-          <div className="notice-pill">
-            <span>提示</span>
-            <strong>{primaryNotice}</strong>
-            <button
-              onClick={() => {
-                setActivePage("settings");
-                setActiveSettingsTab("同步");
-              }}
-            >
-              <Settings size={14} />
-              代理
-            </button>
-          </div>
+          {isWorkbenchPage ? (
+            <div className="notice-pill">
+              <span>提示</span>
+              <strong>{primaryNotice}</strong>
+              <button
+                onClick={() => {
+                  setActivePage("settings");
+                  setActiveSettingsTab("同步");
+                }}
+              >
+                <Settings size={14} />
+                代理
+              </button>
+            </div>
+          ) : null}
         </header>
 
-        <section className="workflow-strip">
-          <span>
-            <Gauge size={16} /> 本地直连测速
-          </span>
-          <span>
-            <Github size={16} /> GitHub 代理上传
-          </span>
-          <span>
-            <Archive size={16} /> 备份保护
-          </span>
-          <div className="ml-auto flex gap-3">
-            <button className="ghost-button" onClick={() => void refreshState("刷新检查")} disabled={busyAction === "refresh"}>
-              <RefreshCw size={16} className={busyAction === "refresh" ? "animate-spin" : ""} />
-              刷新检查
-            </button>
-            <button className="secondary-button" onClick={() => void handleSaveConfig()} disabled={busyAction === "save"}>
-              <Save size={16} />
-              保存配置
-            </button>
-            <button className="soft-button" onClick={() => void handleOpenOutputFolder()}>
-              <FolderOpen size={16} />
-              输出目录
-            </button>
-          </div>
-        </section>
+        {isWorkbenchPage ? (
+          <section className="workflow-strip">
+            <span>
+              <Gauge size={16} /> 本地直连测速
+            </span>
+            <span>
+              <Github size={16} /> GitHub 代理上传
+            </span>
+            <span>
+              <Archive size={16} /> 备份保护
+            </span>
+            <div className="ml-auto flex gap-3">
+              <button className="ghost-button" onClick={() => void refreshState("刷新检查")} disabled={busyAction === "refresh"}>
+                <RefreshCw size={16} className={busyAction === "refresh" ? "animate-spin" : ""} />
+                刷新检查
+              </button>
+              <button className="secondary-button" onClick={() => void handleSaveConfig()} disabled={busyAction === "save"}>
+                <Save size={16} />
+                保存配置
+              </button>
+              <button className="soft-button" onClick={() => void handleOpenOutputFolder()}>
+                <FolderOpen size={16} />
+                输出目录
+              </button>
+            </div>
+          </section>
+        ) : null}
 
         {stateError ? <div className="state-banner state-banner--error">{stateError}</div> : null}
 
-        <div key={activePage} className="page-stage">
+        <div key={activePage} className={clsx("page-stage", !isWorkbenchPage && "page-stage--compact")}>
           {pageContent}
         </div>
       </section>

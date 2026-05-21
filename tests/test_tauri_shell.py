@@ -54,6 +54,9 @@ class TauriShellTests(unittest.TestCase):
         self.assertIn("tool-grid", app)
         self.assertIn("workbench-main", app)
         self.assertIn("workbench-preflight", app)
+        self.assertIn("settings-shell", app)
+        self.assertIn("settings-shell-meta", app)
+        self.assertIn("page-stage--compact", app)
         self.assertIn("aria-label={`侧栏-${item.label}`}", app)
         self.assertIn('aria-current={activePage === item.id ? "page" : undefined}', app)
         self.assertIn("box-shadow", css)
@@ -66,8 +69,8 @@ class TauriShellTests(unittest.TestCase):
             self.assertIn(token, css)
 
         self.assertIn(".page-tab::before", css)
-        self.assertIn("filter: blur(10px)", css)
-        self.assertIn("transform: translateY(-1px) scale(1.04)", css)
+        self.assertIn("filter: blur(8px)", css)
+        self.assertIn("transform: translateY(-1px) scale(1.02)", css)
         self.assertIn(".page-tab.active", css)
         self.assertIn("background: rgba(29, 78, 216, 0.12)", css)
 
@@ -108,12 +111,17 @@ class TauriShellTests(unittest.TestCase):
         self.assertIn("page-title-main", app)
         self.assertIn("task-title", app)
         self.assertIn("icon-badge", app)
+        self.assertIn("isWorkbenchPage", app)
+        self.assertIn("settings-fields--compact", app)
         self.assertIn("grid-template-columns: 120px minmax(0, 1fr)", css)
         self.assertIn("top: calc(50% - 251px)", css)
-        self.assertIn("font-size: 24px", css)
-        self.assertIn("font-size: 21px", css)
-        self.assertIn("min-height: 84px", css)
-        self.assertIn("grid-template-columns: 40px minmax(0, 1fr)", css)
+        self.assertIn("height: 48px", css)
+        self.assertIn("font-size: 22px", css)
+        self.assertIn("font-size: 19px", css)
+        self.assertIn("min-height: 80px", css)
+        self.assertIn("grid-template-columns: 38px minmax(0, 1fr)", css)
+        self.assertIn("settings-shell-meta", css)
+        self.assertIn("page-stage--compact", css)
 
 
 if __name__ == "__main__":
