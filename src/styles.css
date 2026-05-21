@@ -469,43 +469,17 @@ textarea,
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(420px, 1fr) minmax(300px, 0.62fr);
-  grid-template-areas:
-    "main status"
-    "tools preflight"
-    "latest log";
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
   column-gap: 14px;
   row-gap: 12px;
   align-items: start;
   padding-bottom: 18px;
 }
 
-.dashboard-grid > .glass-panel {
-  width: 100%;
-}
-
-.workbench-main {
-  grid-area: main;
-}
-
-.workbench-status {
-  grid-area: status;
-}
-
-.workbench-tools {
-  grid-area: tools;
-}
-
-.workbench-preflight {
-  grid-area: preflight;
-}
-
-.workbench-latest {
-  grid-area: latest;
-}
-
-.workbench-log {
-  grid-area: log;
+.dashboard-column {
+  display: grid;
+  gap: 12px;
+  align-content: start;
 }
 
 .glass-panel {
@@ -1428,13 +1402,11 @@ textarea,
   }
 
   .dashboard-grid {
-    grid-template-areas:
-      "main"
-      "status"
-      "tools"
-      "preflight"
-      "latest"
-      "log";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-column {
+    gap: 10px;
   }
 
   .workflow-strip {

@@ -118,7 +118,8 @@ class TauriShellTests(unittest.TestCase):
     def test_react_styles_align_workbench_rows_and_soften_shadow_gutter(self):
         css = (ROOT / "src" / "styles.css").read_text(encoding="utf-8")
 
-        self.assertIn('grid-template-areas:\n    "main status"\n    "tools preflight"\n    "latest log";', css)
+        self.assertIn(".dashboard-column", css)
+        self.assertIn("grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr)", css)
         self.assertIn("--bar-shadow:", css)
         self.assertIn("box-shadow: var(--bar-shadow)", css)
         self.assertIn("row-gap: 12px", css)
