@@ -244,6 +244,31 @@ class DesktopAppHelperTests(unittest.TestCase):
             desktop_app.WORKBENCH_SECONDARY_ACTIONS,
         )
 
+    def test_desktop_app_defaults_to_modern_react_route(self):
+        self.assertFalse(desktop_app.should_use_legacy_tk(argv=[], environ={}))
+        self.assertTrue(desktop_app.should_use_legacy_tk(argv=["--legacy-tk"], environ={}))
+        self.assertTrue(desktop_app.should_use_legacy_tk(argv=[], environ={"CFNB_LEGACY_TK": "1"}))
+
+    def test_modern_desktop_strategy_prefers_tauri_when_rust_exists(self):
+        def fake_which(name):
+            return f"C:/tools/{name}" if name in {"npm.cmd", "cargo", "rustc"} else None
+
+        strategy = desktop_app.resolve_modern_desktop_strategy(which=fake_which)
+
+        self.assertEqual("tauri", strategy.kind)
+        self.assertEqual(["C:/tools/npm.cmd", "run", "tauri", "dev"], strategy.command)
+
+    def test_modern_desktop_strategy_falls_back_to_web_app_without_rust(self):
+        def fake_which(name):
+            return f"C:/tools/{name}" if name == "npm.cmd" else None
+
+        strategy = desktop_app.resolve_modern_desktop_strategy(which=fake_which)
+
+        self.assertEqual("web-app", strategy.kind)
+        self.assertIn("dev", strategy.command)
+        self.assertIn("--port", strategy.command)
+        self.assertEqual(desktop_app.MODERN_DESKTOP_URL, strategy.url)
+
     def test_cockpit_layout_tokens_prevent_square_blocks_and_text_clipping(self):
         layout = desktop_app.COCKPIT_LAYOUT
 

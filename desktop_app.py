@@ -8,15 +8,22 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
+import webbrowser
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Mapping
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence
 
 from PIL import Image, ImageChops, ImageColor, ImageDraw, ImageFilter, ImageFont, ImageTk
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().with_name("config.json")
 MAIN_SCRIPT_PATH = Path(__file__).resolve().with_name("main.py")
+PROJECT_ROOT = Path(__file__).resolve().parent
+MODERN_DESKTOP_HOST = "127.0.0.1"
+MODERN_DESKTOP_PORT = 1420
+MODERN_DESKTOP_URL = f"http://{MODERN_DESKTOP_HOST}:{MODERN_DESKTOP_PORT}"
 
 
 @dataclass(frozen=True)
@@ -64,6 +71,13 @@ class PreflightReport:
     text: str
     can_continue: bool
     has_warnings: bool
+
+
+@dataclass(frozen=True)
+class ModernDesktopLaunch:
+    kind: str
+    command: List[str]
+    url: str
 
 
 NAV_ITEMS: List[NavItem] = [
@@ -176,6 +190,112 @@ COCKPIT_STRUCTURE = {
     "sidebar_has_action_button": True,
     "background_layers": ["shell"],
 }
+
+
+def should_use_legacy_tk(
+    argv: Optional[Sequence[str]] = None,
+    environ: Optional[Mapping[str, str]] = None,
+) -> bool:
+    args = list(sys.argv[1:] if argv is None else argv)
+    env = os.environ if environ is None else environ
+    return "--legacy-tk" in args or env.get("CFNB_LEGACY_TK") == "1"
+
+
+def _npm_command(which: Callable[[str], Optional[str]] = shutil.which) -> str:
+    candidates = ["npm.cmd", "npm"] if sys.platform == "win32" else ["npm"]
+    for candidate in candidates:
+        resolved = which(candidate)
+        if resolved:
+            return resolved
+    return candidates[-1]
+
+
+def resolve_modern_desktop_strategy(
+    which: Callable[[str], Optional[str]] = shutil.which,
+) -> ModernDesktopLaunch:
+    npm = _npm_command(which)
+    if which("cargo") and which("rustc"):
+        return ModernDesktopLaunch("tauri", [npm, "run", "tauri", "dev"], MODERN_DESKTOP_URL)
+    return ModernDesktopLaunch(
+        "web-app",
+        [
+            npm,
+            "run",
+            "dev",
+            "--",
+            "--host",
+            MODERN_DESKTOP_HOST,
+            "--port",
+            str(MODERN_DESKTOP_PORT),
+        ],
+        MODERN_DESKTOP_URL,
+    )
+
+
+def is_local_url_ready(url: str = MODERN_DESKTOP_URL, timeout: float = 0.5) -> bool:
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            return 200 <= getattr(response, "status", 200) < 500
+    except (OSError, urllib.error.URLError):
+        return False
+
+
+def wait_for_local_url(url: str = MODERN_DESKTOP_URL, timeout_seconds: float = 25.0) -> bool:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if is_local_url_ready(url):
+            return True
+        time.sleep(0.35)
+    return False
+
+
+def _open_modern_web_window(url: str = MODERN_DESKTOP_URL) -> None:
+    if sys.platform == "win32":
+        browser_candidates = [
+            shutil.which("msedge"),
+            shutil.which("chrome"),
+            os.environ.get("ProgramFiles", "") + r"\Microsoft\Edge\Application\msedge.exe",
+            os.environ.get("ProgramFiles(x86)", "") + r"\Microsoft\Edge\Application\msedge.exe",
+        ]
+        for candidate in browser_candidates:
+            if candidate and Path(candidate).exists():
+                subprocess.Popen(
+                    [candidate, f"--app={url}"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+                return
+    webbrowser.open(url)
+
+
+def launch_modern_desktop(project_root: Path = PROJECT_ROOT) -> ModernDesktopLaunch:
+    strategy = resolve_modern_desktop_strategy()
+    if strategy.kind == "tauri":
+        subprocess.Popen(
+            strategy.command,
+            cwd=project_root,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        return strategy
+
+    if not is_local_url_ready(strategy.url):
+        log_path = project_root / "desktop_ui.log"
+        log_file = log_path.open("ab")
+        subprocess.Popen(
+            strategy.command,
+            cwd=project_root,
+            stdout=log_file,
+            stderr=log_file,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        if not wait_for_local_url(strategy.url):
+            raise RuntimeError(f"现代桌面 UI 启动超时，请查看 {log_path}")
+
+    _open_modern_web_window(strategy.url)
+    return strategy
 
 SETTINGS_FIELD_GROUPS: Dict[str, List[str]] = {
     "常用": [
@@ -2760,8 +2880,36 @@ class DesktopApp:
         self.root.mainloop()
 
 
-def main() -> None:
-    DesktopApp().run()
+def _show_modern_launch_error(error: Exception) -> None:
+    message = (
+        "现代 React/Tauri 桌面界面启动失败。\n\n"
+        f"{error}\n\n"
+        "请确认已安装 Node.js 依赖，或在命令行运行：\n"
+        "npm install\n\n"
+        "如果只是临时要打开旧 Tkinter 版，可以运行：\n"
+        "python desktop_app.py --legacy-tk"
+    )
+    try:
+        import tkinter as tk
+        from tkinter import messagebox
+
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror("启动失败", message)
+        root.destroy()
+    except Exception:
+        print(message, file=sys.stderr)
+
+
+def main(argv: Optional[Sequence[str]] = None) -> None:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if should_use_legacy_tk(args):
+        DesktopApp().run()
+        return
+    try:
+        launch_modern_desktop()
+    except Exception as exc:
+        _show_modern_launch_error(exc)
 
 
 if __name__ == "__main__":
