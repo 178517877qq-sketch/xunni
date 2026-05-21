@@ -52,6 +52,31 @@ class TauriShellTests(unittest.TestCase):
         self.assertIn("box-shadow", css)
         self.assertIn("linear-gradient", css)
 
+    def test_react_styles_match_cockpit_navigation_details(self):
+        css = (ROOT / "src" / "styles.css").read_text(encoding="utf-8")
+
+        for token in ["--primary: #1d4ed8", "--bg-card:", "--shadow-lg:", "--edge-glow:"]:
+            self.assertIn(token, css)
+
+        self.assertIn(".page-tab::before", css)
+        self.assertIn("filter: blur(12px)", css)
+        self.assertIn("transform: translateY(-1px) scale(1.04)", css)
+        self.assertIn(".page-tab.active", css)
+        self.assertIn("background: rgba(29, 78, 216, 0.12)", css)
+
+    def test_react_styles_keep_surfaces_rounded_and_text_safe(self):
+        css = (ROOT / "src" / "styles.css").read_text(encoding="utf-8")
+
+        self.assertIn(".sidebar-rail", css)
+        self.assertIn("position: fixed", css)
+        self.assertIn("top: 50%", css)
+        self.assertIn("width: 68px", css)
+        self.assertIn("border-radius: 30px", css)
+        self.assertIn(".notice-pill span", css)
+        self.assertNotIn("border-radius: 0;", css)
+        self.assertIn("overflow-wrap: anywhere", css)
+        self.assertIn(":focus-visible", css)
+
 
 if __name__ == "__main__":
     unittest.main()
