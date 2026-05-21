@@ -52,6 +52,8 @@ class TauriShellTests(unittest.TestCase):
         self.assertIn("rounded-[32px]", app)
         self.assertIn("action-grid", app)
         self.assertIn("tool-grid", app)
+        self.assertIn("workbench-main", app)
+        self.assertIn("workbench-preflight", app)
         self.assertIn("aria-label={`侧栏-${item.label}`}", app)
         self.assertIn('aria-current={activePage === item.id ? "page" : undefined}', app)
         self.assertIn("box-shadow", css)
@@ -90,6 +92,14 @@ class TauriShellTests(unittest.TestCase):
         self.assertIn("grid-template-columns: minmax(0, 1fr) !important", css)
         self.assertIn("overflow-x: auto", css)
         self.assertIn("scrollbar-color", css)
+
+    def test_react_styles_align_workbench_rows_and_soften_shadow_gutter(self):
+        css = (ROOT / "src" / "styles.css").read_text(encoding="utf-8")
+
+        self.assertIn('grid-template-areas:\n    "main status"\n    "tools preflight"\n    "latest log";', css)
+        self.assertIn("--bar-shadow:", css)
+        self.assertIn("box-shadow: var(--bar-shadow)", css)
+        self.assertIn("row-gap: 22px", css)
 
 
 if __name__ == "__main__":

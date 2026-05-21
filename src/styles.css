@@ -29,9 +29,10 @@
 
   --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.08);
   --shadow-md: 0 12px 24px rgba(15, 23, 42, 0.12);
-  --shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.16);
+  --shadow-lg: 0 14px 30px rgba(15, 23, 42, 0.1), 0 3px 10px rgba(15, 23, 42, 0.05);
   --edge-glow: linear-gradient(135deg, rgba(29, 78, 216, 0.28), rgba(14, 165, 165, 0.2));
-  --panel-shadow: 0 20px 48px rgba(15, 23, 42, 0.12), 0 4px 14px rgba(15, 23, 42, 0.06);
+  --panel-shadow: 0 16px 34px rgba(15, 23, 42, 0.1), 0 3px 10px rgba(15, 23, 42, 0.05);
+  --bar-shadow: 0 8px 22px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04);
   --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --motion-fast: 180ms;
 }
@@ -176,7 +177,7 @@ textarea:focus-visible {
   border: 1px solid var(--border);
   border-radius: 30px;
   background: var(--bg-card);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.1), 0 4px 12px rgba(15, 23, 42, 0.05);
   backdrop-filter: blur(20px);
 }
 
@@ -387,6 +388,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 24px;
   border-radius: 31px;
+  box-shadow: var(--bar-shadow);
 }
 
 .workflow-strip > .ml-auto {
@@ -417,9 +419,39 @@ textarea:focus-visible {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(540px, 1.08fr) minmax(420px, 0.92fr);
-  gap: 34px;
+  grid-template-columns: minmax(540px, 1fr) minmax(460px, 0.86fr);
+  grid-template-areas:
+    "main status"
+    "tools preflight"
+    "latest log";
+  column-gap: 34px;
+  row-gap: 22px;
+  align-items: stretch;
   padding-bottom: 30px;
+}
+
+.workbench-main {
+  grid-area: main;
+}
+
+.workbench-status {
+  grid-area: status;
+}
+
+.workbench-tools {
+  grid-area: tools;
+}
+
+.workbench-preflight {
+  grid-area: preflight;
+}
+
+.workbench-latest {
+  grid-area: latest;
+}
+
+.workbench-log {
+  grid-area: log;
 }
 
 .glass-panel {
@@ -963,6 +995,16 @@ textarea:focus-visible {
   .dashboard-grid,
   .results-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-grid {
+    grid-template-areas:
+      "main"
+      "status"
+      "tools"
+      "preflight"
+      "latest"
+      "log";
   }
 
   .workflow-strip {

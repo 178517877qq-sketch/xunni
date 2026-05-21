@@ -224,94 +224,90 @@ function WorkbenchPage({
 
   return (
     <div className="dashboard-grid">
-      <section className="space-y-5">
-        <article className="glass-panel rounded-[32px] p-6">
-          <div className="flex items-start gap-5">
-            <div className="grid h-16 w-16 place-items-center rounded-2xl border border-blue-200 bg-blue-100 text-xl font-black text-blue-700">
-              cf
+      <article className="glass-panel workbench-main rounded-[32px] p-6">
+        <div className="flex items-start gap-5">
+          <div className="grid h-16 w-16 place-items-center rounded-2xl border border-blue-200 bg-blue-100 text-xl font-black text-blue-700">
+            cf
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-[25px] font-black text-slate-950">Cloudflare IP 优选任务</h2>
+                <p className="mt-2 text-sm text-slate-500">直连测速，代理上传</p>
+              </div>
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+                手动流程
+              </span>
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-[25px] font-black text-slate-950">Cloudflare IP 优选任务</h2>
-                  <p className="mt-2 text-sm text-slate-500">直连测速，代理上传</p>
-                </div>
-                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
-                  手动流程
-                </span>
-              </div>
 
-              <div className="action-grid mt-7 grid grid-cols-2 gap-4">
-                {actionTiles.map((tile) => (
-                  <ActionTile
-                    key={tile.mode}
-                    tile={tile}
-                    busy={busyAction === tile.mode}
-                    onRun={onRun}
-                  />
-                ))}
-              </div>
+            <div className="action-grid mt-7 grid grid-cols-2 gap-4">
+              {actionTiles.map((tile) => (
+                <ActionTile
+                  key={tile.mode}
+                  tile={tile}
+                  busy={busyAction === tile.mode}
+                  onRun={onRun}
+                />
+              ))}
             </div>
           </div>
-        </article>
+        </div>
+      </article>
 
-        <article className="glass-panel rounded-[28px] p-5">
-          <h3 className="section-title">工具</h3>
-          <div className="tool-grid mt-4 grid grid-cols-3 gap-4">
-            <button className="danger-button" disabled title="当前版本未接入后台任务中止">
-              停止任务
-            </button>
-            <button className="secondary-button" onClick={() => onSaveSettings()}>
-              保存设置
-            </button>
-            <button className="secondary-button" onClick={() => onRefreshState()}>
-              刷新状态
-            </button>
-          </div>
-        </article>
+      <article className="glass-panel workbench-status rounded-[32px] p-5">
+        <h3 className="section-title">当前状态</h3>
+        <div className="mt-4 divide-y divide-slate-200/80">
+          {cards.map((card) => (
+            <StatusRow key={card.title} card={card} />
+          ))}
+        </div>
+      </article>
 
-        <article className="glass-panel rounded-[28px] p-5">
-          <h3 className="section-title">最新结果预览</h3>
-          <p className="mt-2 text-sm text-slate-500">443 优先输出，客户端继续二次优选。</p>
-          <div className="mt-4 flex flex-wrap gap-7 text-sm">
-            <span className="text-slate-500">
-              节点数 <strong className="ml-2 text-lg text-slate-950">{state.output_count}</strong>
-            </span>
-            <span className="text-slate-500">
-              443 占比 <strong className="ml-2 text-lg text-blue-700">{state.port_share}</strong>
-            </span>
-            <span className="text-slate-500">
-              更新时间 <strong className="ml-2 text-slate-950">{state.output_updated_at ?? "未生成"}</strong>
-            </span>
-          </div>
-          <pre className="preview-list">{state.output_preview.join("\n")}</pre>
-        </article>
-      </section>
+      <article className="glass-panel workbench-tools rounded-[28px] p-5">
+        <h3 className="section-title">工具</h3>
+        <div className="tool-grid mt-4 grid grid-cols-3 gap-4">
+          <button className="danger-button" disabled title="当前版本未接入后台任务中止">
+            停止任务
+          </button>
+          <button className="secondary-button" onClick={() => onSaveSettings()}>
+            保存设置
+          </button>
+          <button className="secondary-button" onClick={() => onRefreshState()}>
+            刷新状态
+          </button>
+        </div>
+      </article>
 
-      <section className="space-y-5">
-        <article className="glass-panel rounded-[32px] p-5">
-          <h3 className="section-title">当前状态</h3>
-          <div className="mt-4 divide-y divide-slate-200/80">
-            {cards.map((card) => (
-              <StatusRow key={card.title} card={card} />
-            ))}
-          </div>
-        </article>
+      <article className="glass-panel workbench-preflight rounded-[28px] p-5">
+        <h3 className="section-title">运行前检查</h3>
+        <div className={clsx("terminal-card", state.preflight.has_warnings && "has-warning")}>
+          {preflightLines.map((line) => (
+            <div key={line}>{line}</div>
+          ))}
+        </div>
+      </article>
 
-        <article className="glass-panel rounded-[28px] p-5">
-          <h3 className="section-title">运行前检查</h3>
-          <div className={clsx("terminal-card", state.preflight.has_warnings && "has-warning")}>
-            {preflightLines.map((line) => (
-              <div key={line}>{line}</div>
-            ))}
-          </div>
-        </article>
+      <article className="glass-panel workbench-latest rounded-[28px] p-5">
+        <h3 className="section-title">最新结果预览</h3>
+        <p className="mt-2 text-sm text-slate-500">443 优先输出，客户端继续二次优选。</p>
+        <div className="mt-4 flex flex-wrap gap-7 text-sm">
+          <span className="text-slate-500">
+            节点数 <strong className="ml-2 text-lg text-slate-950">{state.output_count}</strong>
+          </span>
+          <span className="text-slate-500">
+            443 占比 <strong className="ml-2 text-lg text-blue-700">{state.port_share}</strong>
+          </span>
+          <span className="text-slate-500">
+            更新时间 <strong className="ml-2 text-slate-950">{state.output_updated_at ?? "未生成"}</strong>
+          </span>
+        </div>
+        <pre className="preview-list">{state.output_preview.join("\n")}</pre>
+      </article>
 
-        <article className="glass-panel rounded-[28px] p-5">
-          <h3 className="section-title">运行日志</h3>
-          <div className="empty-log">{lastCommand}</div>
-        </article>
-      </section>
+      <article className="glass-panel workbench-log rounded-[28px] p-5">
+        <h3 className="section-title">运行日志</h3>
+        <div className="empty-log">{lastCommand}</div>
+      </article>
     </div>
   );
 }
