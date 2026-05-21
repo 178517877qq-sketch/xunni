@@ -114,7 +114,7 @@ function iconForAccent(accent: string) {
 
 function IconBadge({ icon: Icon, tone }: { icon: typeof Play; tone: string }) {
   return (
-    <div className={clsx("grid h-12 w-12 place-items-center rounded-2xl border", `badge-${tone}`)}>
+    <div className={clsx("icon-badge grid place-items-center border", `badge-${tone}`)}>
       <Icon size={22} strokeWidth={2.4} />
     </div>
   );
@@ -139,9 +139,9 @@ function ActionTile({
       onClick={() => onRun(tile.mode)}
     >
       <IconBadge icon={Icon} tone={tile.tone} />
-      <span className="min-w-0">
-        <span className="block text-[15px] font-semibold leading-5 text-slate-950">{tile.title}</span>
-        <span className="mt-1 block text-[12px] leading-5 text-slate-500">{tile.hint}</span>
+      <span className="action-copy min-w-0">
+        <span className="action-title">{tile.title}</span>
+        <span className="action-hint">{tile.hint}</span>
       </span>
     </button>
   );
@@ -157,12 +157,12 @@ function StatusRow({
     <div className="status-row">
       <IconBadge icon={Icon} tone={card.accent} />
       <div className="min-w-0">
-        <div className="text-[12px] font-semibold text-slate-500">{card.title}</div>
-        <div className={clsx("mt-1 text-[16px] font-bold", statusToneMap[card.accent] ?? "text-blue-700")}>
+        <div className="status-label">{card.title}</div>
+        <div className={clsx("status-value", statusToneMap[card.accent] ?? "text-blue-700")}>
           {card.value}
         </div>
       </div>
-      <div className="ml-auto text-right text-[12px] text-slate-500">{card.detail}</div>
+      <div className="status-detail ml-auto text-right">{card.detail}</div>
     </div>
   );
 }
@@ -225,17 +225,17 @@ function WorkbenchPage({
   return (
     <div className="dashboard-grid">
       <article className="glass-panel workbench-main rounded-[32px] p-6">
-        <div className="flex items-start gap-5">
-          <div className="grid h-16 w-16 place-items-center rounded-2xl border border-blue-200 bg-blue-100 text-xl font-black text-blue-700">
+        <div className="task-head flex items-start gap-5">
+          <div className="task-logo grid place-items-center border border-blue-200 bg-blue-100 font-black text-blue-700">
             cf
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-4">
+            <div className="task-title-row flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-[25px] font-black text-slate-950">Cloudflare IP 优选任务</h2>
-                <p className="mt-2 text-sm text-slate-500">直连测速，代理上传</p>
+                <h2 className="task-title text-slate-950">Cloudflare IP 优选任务</h2>
+                <p className="task-subtitle text-slate-500">直连测速，代理上传</p>
               </div>
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+              <span className="manual-badge rounded-full border border-emerald-200 bg-emerald-50 font-semibold text-emerald-700">
                 手动流程
               </span>
             </div>
@@ -760,8 +760,8 @@ function App() {
       <section className="workspace">
         <header className="topbar">
           <div>
-            <h1 className="text-[28px] font-black tracking-normal text-blue-700">{pageTitles[activePage]}</h1>
-            <p className="mt-2 text-sm text-slate-500">配置已加载 · 手动工具模式</p>
+            <h1 className="page-title-main tracking-normal text-blue-700">{pageTitles[activePage]}</h1>
+            <p className="page-subtitle-main text-slate-500">配置已加载 · 手动工具模式</p>
           </div>
 
           <nav className="page-tabs">

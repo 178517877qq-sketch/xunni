@@ -66,7 +66,7 @@ class TauriShellTests(unittest.TestCase):
             self.assertIn(token, css)
 
         self.assertIn(".page-tab::before", css)
-        self.assertIn("filter: blur(12px)", css)
+        self.assertIn("filter: blur(10px)", css)
         self.assertIn("transform: translateY(-1px) scale(1.04)", css)
         self.assertIn(".page-tab.active", css)
         self.assertIn("background: rgba(29, 78, 216, 0.12)", css)
@@ -99,7 +99,21 @@ class TauriShellTests(unittest.TestCase):
         self.assertIn('grid-template-areas:\n    "main status"\n    "tools preflight"\n    "latest log";', css)
         self.assertIn("--bar-shadow:", css)
         self.assertIn("box-shadow: var(--bar-shadow)", css)
-        self.assertIn("row-gap: 22px", css)
+        self.assertIn("row-gap: 18px", css)
+
+    def test_react_styles_keep_cockpit_compact_density(self):
+        app = (ROOT / "src" / "App.tsx").read_text(encoding="utf-8")
+        css = (ROOT / "src" / "styles.css").read_text(encoding="utf-8")
+
+        self.assertIn("page-title-main", app)
+        self.assertIn("task-title", app)
+        self.assertIn("icon-badge", app)
+        self.assertIn("grid-template-columns: 120px minmax(0, 1fr)", css)
+        self.assertIn("top: calc(50% - 251px)", css)
+        self.assertIn("font-size: 24px", css)
+        self.assertIn("font-size: 21px", css)
+        self.assertIn("min-height: 84px", css)
+        self.assertIn("grid-template-columns: 40px minmax(0, 1fr)", css)
 
 
 if __name__ == "__main__":
