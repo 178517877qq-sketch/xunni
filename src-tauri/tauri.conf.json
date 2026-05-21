@@ -12,11 +12,15 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "cfnb 手动优选工具",
         "width": 1280,
         "height": 800,
-        "minWidth": 1100,
-        "minHeight": 720,
+        "minWidth": 900,
+        "minHeight": 600,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "transparent": false,
         "resizable": true,
         "center": true
       }

@@ -112,6 +112,20 @@ function iconForAccent(accent: string) {
   return statusIconMap[accent] ?? Cloud;
 }
 
+function confirmWorkflowStart(mode: WorkflowMode, hasWarnings: boolean) {
+  if (mode === "proxy-test") {
+    return true;
+  }
+
+  const messages: Partial<Record<WorkflowMode, string>> = {
+    "optimize-only": `优选前请确认：\n\n1. 已断开 VPN/代理，测速走本地直连。\n2. config.json、输出路径和本地 Python 状态已检查。\n${hasWarnings ? "\n当前预检有提示，确认仍继续？" : "\n确认开始只运行优选？"}`,
+    "optimize-sync": `优选前请确认：\n\n1. 已断开 VPN/代理，测速走本地直连。\n2. 优选完成后会按设置上传到 GitHub。\n${hasWarnings ? "\n当前预检有提示，确认仍继续？" : "\n确认开始优选并自动上传？"}`,
+    "sync-only": "上传前请确认：\n\n1. 当前 ip.txt 已是你要发布的结果。\n2. 已打开用于 GitHub 上传的代理。\n\n确认上传到 GitHub？"
+  };
+
+  return window.confirm(messages[mode] ?? "确认执行当前任务？");
+}
+
 function IconBadge({ icon: Icon, tone }: { icon: typeof Play; tone: string }) {
   return (
     <div className={clsx("icon-badge grid place-items-center border", `badge-${tone}`)}>
@@ -564,6 +578,13 @@ function App() {
       pythonPath,
       proxyUrl
     });
+    if (!confirmWorkflowStart(mode, desktopState.preflight.has_warnings)) {
+      const cancelled = `${workflow.label} 已取消`;
+      setLastCommand(cancelled);
+      pushLog(cancelled, "neutral");
+      return;
+    }
+
     const commandText = `${workflow.program} ${workflow.args.join(" ")}`;
     setLastCommand(`${workflow.label}: ${commandText}`);
     pushLog(`${workflow.label} 已触发`, "info");
@@ -730,6 +751,7 @@ function App() {
 
   return (
     <main className="app-shell">
+      <div className="drag-region" data-tauri-drag-region />
       <aside className="sidebar">
         <button className={clsx("sidebar-refresh", busyAction === "refresh" && "is-busy")} title="刷新状态" onClick={() => void refreshState("刷新检查")}>
           <RefreshCw size={20} className={busyAction === "refresh" ? "animate-spin" : ""} />

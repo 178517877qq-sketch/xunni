@@ -4,7 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import desktop_app
 
@@ -269,6 +269,22 @@ class DesktopAppHelperTests(unittest.TestCase):
         self.assertIn("--port", strategy.command)
         self.assertTrue(strategy.url.startswith("http://127.0.0.1:"))
 
+    def test_modern_web_window_opens_with_cockpit_reference_size(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            browser_exe = Path(tmpdir) / "msedge.exe"
+            browser_exe.write_text("", encoding="utf-8")
+
+            with (
+                patch.object(desktop_app.sys, "platform", "win32"),
+                patch.object(desktop_app.shutil, "which", side_effect=lambda name: str(browser_exe) if name == "msedge" else None),
+                patch.object(desktop_app.subprocess, "Popen") as popen,
+            ):
+                desktop_app._open_modern_web_window("http://127.0.0.1:5173")
+
+        command = popen.call_args.args[0]
+        self.assertIn("--app=http://127.0.0.1:5173", command)
+        self.assertIn("--window-size=1280,800", command)
+
     def test_modern_desktop_port_picker_skips_blocked_default_port(self):
         original_ready = desktop_app.is_modern_ui_ready
         original_bindable = desktop_app.is_port_bindable
@@ -405,7 +421,10 @@ class DesktopAppHelperTests(unittest.TestCase):
     def test_cockpit_structure_matches_reference_spacing(self):
         structure = desktop_app.COCKPIT_STRUCTURE
 
-        self.assertGreaterEqual(structure["window_height"], 900)
+        self.assertEqual(1280, structure["window_width"])
+        self.assertEqual(800, structure["window_height"])
+        self.assertEqual(900, structure["min_window_width"])
+        self.assertEqual(600, structure["min_window_height"])
         self.assertGreaterEqual(structure["main_top_padding"], 50)
         self.assertEqual(["header", "tabs", "toolbar", "content"], structure["main_rows"])
         self.assertGreaterEqual(structure["toolbar_height"], 62)

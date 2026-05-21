@@ -26,8 +26,14 @@ class TauriShellTests(unittest.TestCase):
         window = config["app"]["windows"][0]
 
         self.assertEqual("cfnb 手动优选工具", config["productName"])
+        self.assertEqual("main", window["label"])
         self.assertEqual(1280, window["width"])
         self.assertEqual(800, window["height"])
+        self.assertEqual(900, window["minWidth"])
+        self.assertEqual(600, window["minHeight"])
+        self.assertEqual("Overlay", window["titleBarStyle"])
+        self.assertTrue(window["hiddenTitle"])
+        self.assertFalse(window["transparent"])
         self.assertTrue(window["resizable"])
         self.assertEqual("http://127.0.0.1:5173", config["build"]["devUrl"])
         self.assertEqual("../dist", config["build"]["frontendDist"])
@@ -57,6 +63,9 @@ class TauriShellTests(unittest.TestCase):
         self.assertIn("settings-shell", app)
         self.assertIn("settings-shell-meta", app)
         self.assertIn("page-stage--compact", app)
+        self.assertIn("confirmWorkflowStart", app)
+        self.assertIn("data-tauri-drag-region", app)
+        self.assertIn("优选前请确认", app)
         self.assertIn("aria-label={`侧栏-${item.label}`}", app)
         self.assertIn('aria-current={activePage === item.id ? "page" : undefined}', app)
         self.assertIn("box-shadow", css)
@@ -69,10 +78,13 @@ class TauriShellTests(unittest.TestCase):
             self.assertIn(token, css)
 
         self.assertIn(".page-tab::before", css)
-        self.assertIn("filter: blur(8px)", css)
-        self.assertIn("transform: translateY(-1px) scale(1.02)", css)
+        self.assertIn("--hover-lift-shadow:", css)
+        self.assertIn("filter: blur(12px)", css)
+        self.assertIn("transform: translateY(-1px) scale(1.04)", css)
         self.assertIn(".page-tab.active", css)
-        self.assertIn("background: rgba(29, 78, 216, 0.12)", css)
+        self.assertIn("background: var(--primary)", css)
+        self.assertIn("color: #fff", css)
+        self.assertIn("filter: drop-shadow", css)
 
     def test_react_styles_keep_surfaces_rounded_and_text_safe(self):
         css = (ROOT / "src" / "styles.css").read_text(encoding="utf-8")
@@ -86,6 +98,9 @@ class TauriShellTests(unittest.TestCase):
         self.assertNotIn("border-radius: 0;", css)
         self.assertIn("overflow-wrap: anywhere", css)
         self.assertIn(":focus-visible", css)
+        self.assertIn(".drag-region", css)
+        self.assertIn("-webkit-app-region: drag", css)
+        self.assertIn("-webkit-app-region: no-drag", css)
 
     def test_react_styles_have_narrow_viewport_guardrails(self):
         css = (ROOT / "src" / "styles.css").read_text(encoding="utf-8")
@@ -116,8 +131,9 @@ class TauriShellTests(unittest.TestCase):
         self.assertIn("grid-template-columns: 120px minmax(0, 1fr)", css)
         self.assertIn("top: calc(50% - 251px)", css)
         self.assertIn("height: 48px", css)
-        self.assertIn("font-size: 22px", css)
-        self.assertIn("font-size: 19px", css)
+        self.assertIn("font-size: 21px", css)
+        self.assertIn("font-size: 18px", css)
+        self.assertIn("border-radius: 24px", css)
         self.assertIn("min-height: 80px", css)
         self.assertIn("grid-template-columns: 38px minmax(0, 1fr)", css)
         self.assertIn("settings-shell-meta", css)

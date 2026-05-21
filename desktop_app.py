@@ -184,7 +184,10 @@ COCKPIT_WORKBENCH_LAYOUT = {
 }
 
 COCKPIT_STRUCTURE = {
-    "window_height": 900,
+    "window_width": 1280,
+    "window_height": 800,
+    "min_window_width": 900,
+    "min_window_height": 600,
     "main_top_padding": 54,
     "main_rows": ["header", "tabs", "toolbar", "content"],
     "toolbar_height": 66,
@@ -299,7 +302,11 @@ def _open_modern_web_window(url: str = MODERN_DESKTOP_URL) -> None:
         for candidate in browser_candidates:
             if candidate and Path(candidate).exists():
                 subprocess.Popen(
-                    [candidate, f"--app={url}"],
+                    [
+                        candidate,
+                        f"--app={url}",
+                        f"--window-size={COCKPIT_STRUCTURE['window_width']},{COCKPIT_STRUCTURE['window_height']}",
+                    ],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
@@ -1339,8 +1346,8 @@ class DesktopApp:
 
         self.root = tk.Tk()
         self.root.title("cfnb 手动优选工具")
-        self.root.geometry(f"1280x{COCKPIT_STRUCTURE['window_height']}")
-        self.root.minsize(1120, 780)
+        self.root.geometry(f"{COCKPIT_STRUCTURE['window_width']}x{COCKPIT_STRUCTURE['window_height']}")
+        self.root.minsize(COCKPIT_STRUCTURE["min_window_width"], COCKPIT_STRUCTURE["min_window_height"])
         self.root.configure(bg=COLORS["bg"])
 
         self.runner = ProcessRunner()
