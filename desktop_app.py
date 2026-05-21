@@ -7,6 +7,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.error
@@ -184,10 +185,10 @@ COCKPIT_WORKBENCH_LAYOUT = {
 }
 
 COCKPIT_STRUCTURE = {
-    "window_width": 1280,
-    "window_height": 800,
-    "min_window_width": 900,
-    "min_window_height": 600,
+    "window_width": 1000,
+    "window_height": 665,
+    "min_window_width": 820,
+    "min_window_height": 560,
     "main_top_padding": 54,
     "main_rows": ["header", "tabs", "toolbar", "content"],
     "toolbar_height": 66,
@@ -293,6 +294,7 @@ def wait_for_local_url(url: str = MODERN_DESKTOP_URL, timeout_seconds: float = 2
 
 def _open_modern_web_window(url: str = MODERN_DESKTOP_URL) -> None:
     if sys.platform == "win32":
+        profile_root = Path(os.environ.get("LOCALAPPDATA", tempfile.gettempdir())) / "cfnb-desktop-browser"
         browser_candidates = [
             shutil.which("msedge"),
             shutil.which("chrome"),
@@ -306,6 +308,8 @@ def _open_modern_web_window(url: str = MODERN_DESKTOP_URL) -> None:
                         candidate,
                         f"--app={url}",
                         f"--window-size={COCKPIT_STRUCTURE['window_width']},{COCKPIT_STRUCTURE['window_height']}",
+                        "--window-position=80,60",
+                        f"--user-data-dir={profile_root}",
                     ],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
