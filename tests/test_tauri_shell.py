@@ -63,9 +63,11 @@ class TauriShellTests(unittest.TestCase):
         self.assertIn("settings-shell", app)
         self.assertIn("settings-shell-meta", app)
         self.assertIn("page-stage--compact", app)
-        self.assertIn("confirmWorkflowStart", app)
         self.assertIn("data-tauri-drag-region", app)
-        self.assertIn("优选前请确认", app)
+        self.assertIn("ConfirmDialog", app)
+        self.assertIn("buildWorkflowConfirmCopy", app)
+        self.assertIn("优选前确认", app)
+        self.assertIn("summary-chips", app)
         self.assertIn("aria-label={`侧栏-${item.label}`}", app)
         self.assertIn('aria-current={activePage === item.id ? "page" : undefined}', app)
         self.assertIn("box-shadow", css)
@@ -101,6 +103,7 @@ class TauriShellTests(unittest.TestCase):
         self.assertIn(".drag-region", css)
         self.assertIn("-webkit-app-region: drag", css)
         self.assertIn("-webkit-app-region: no-drag", css)
+        self.assertIn("scrollbar-gutter: stable", css)
 
     def test_react_styles_have_narrow_viewport_guardrails(self):
         css = (ROOT / "src" / "styles.css").read_text(encoding="utf-8")
@@ -138,6 +141,9 @@ class TauriShellTests(unittest.TestCase):
         self.assertIn("grid-template-columns: 38px minmax(0, 1fr)", css)
         self.assertIn("settings-shell-meta", css)
         self.assertIn("page-stage--compact", css)
+        self.assertIn(".summary-chip", css)
+        self.assertIn(".modal-backdrop", css)
+        self.assertIn(".confirm-dialog", css)
 
 
 if __name__ == "__main__":

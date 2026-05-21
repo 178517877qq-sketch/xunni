@@ -99,6 +99,7 @@ button:disabled {
   opacity: 0.58;
   transform: none !important;
   box-shadow: none !important;
+  filter: none !important;
 }
 
 button:focus-visible,
@@ -266,6 +267,7 @@ textarea,
   height: 100vh;
   overflow: auto;
   padding: 40px 32px 32px 0;
+  scrollbar-gutter: stable;
 }
 
 .topbar {
@@ -282,6 +284,11 @@ textarea,
   font-size: 21px;
   font-weight: 700;
   line-height: 1.14;
+  color: var(--primary);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .page-subtitle-main {
@@ -505,9 +512,27 @@ textarea,
 }
 
 .glass-panel {
+  position: relative;
   overflow: visible;
   border-radius: 24px;
   box-shadow: var(--panel-shadow);
+}
+
+.glass-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0) 42%),
+    radial-gradient(circle at 18% 0%, rgba(29, 78, 216, 0.08), transparent 38%);
+}
+
+.glass-panel > * {
+  position: relative;
+  z-index: 1;
 }
 
 .workbench-main {
@@ -586,16 +611,32 @@ textarea,
   line-height: 1.45;
 }
 
-.workbench-latest .flex.flex-wrap,
-.results-grid article > .flex.flex-wrap {
+.summary-chips {
   margin-top: 10px !important;
-  gap: 14px !important;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px !important;
   font-size: 12px !important;
 }
 
-.workbench-latest strong,
-.results-grid article strong {
+.summary-chip {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  color: var(--text-secondary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+  white-space: nowrap;
+}
+
+.summary-chip strong {
+  margin-left: 0 !important;
   font-size: 14px !important;
+  line-height: 1;
 }
 
 .action-tile {
@@ -1154,6 +1195,150 @@ textarea,
   border-color: rgba(239, 68, 68, 0.28);
   background: rgba(254, 242, 242, 0.94);
   color: #b91c1c;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.24);
+  backdrop-filter: blur(6px);
+  -webkit-app-region: no-drag;
+  animation: modal-fade 180ms var(--motion-ease);
+}
+
+.confirm-dialog {
+  position: relative;
+  width: min(460px, calc(100vw - 36px));
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border-light);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 24px 54px rgba(15, 23, 42, 0.22);
+  animation: modal-rise 220ms var(--motion-ease);
+}
+
+.confirm-close {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  transition:
+    background 160ms var(--motion-ease),
+    color 160ms var(--motion-ease),
+    transform 160ms var(--motion-ease);
+}
+
+.confirm-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  transform: scale(1.04);
+}
+
+.confirm-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: rgba(255, 251, 235, 0.86);
+  color: #b45309;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.confirm-icon--sync {
+  border-color: rgba(29, 78, 216, 0.22);
+  background: rgba(29, 78, 216, 0.1);
+  color: var(--primary);
+}
+
+.confirm-body {
+  min-width: 0;
+  padding-right: 26px;
+}
+
+.confirm-body h2 {
+  margin: 1px 0 10px;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.24;
+}
+
+.confirm-lines {
+  display: grid;
+  gap: 8px;
+}
+
+.confirm-line {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.confirm-line svg {
+  margin-top: 2px;
+  color: var(--primary);
+}
+
+.confirm-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.confirm-actions .ghost-button,
+.confirm-actions .soft-button {
+  min-height: 34px;
+  padding: 0 14px;
+}
+
+.confirm-primary {
+  background: var(--primary);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(29, 78, 216, 0.22);
+}
+
+@keyframes modal-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .page-stage {

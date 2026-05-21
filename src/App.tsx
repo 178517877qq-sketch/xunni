@@ -1,5 +1,6 @@
 import {
   Activity,
+  AlertTriangle,
   Archive,
   CheckCircle2,
   ChevronRight,
@@ -16,7 +17,8 @@ import {
   Settings,
   SlidersHorizontal,
   UploadCloud,
-  WifiOff
+  WifiOff,
+  X
 } from "lucide-react";
 import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
@@ -63,6 +65,14 @@ interface LogEntry {
   time: string;
   text: string;
   tone: LogTone;
+}
+
+interface ConfirmRequest {
+  title: string;
+  lines: string[];
+  confirmLabel: string;
+  tone: "warning" | "sync";
+  resolve: (confirmed: boolean) => void;
 }
 
 const pageTitles: Record<PageId, string> = {
@@ -112,18 +122,45 @@ function iconForAccent(accent: string) {
   return statusIconMap[accent] ?? Cloud;
 }
 
-function confirmWorkflowStart(mode: WorkflowMode, hasWarnings: boolean) {
+function buildWorkflowConfirmCopy(mode: WorkflowMode, hasWarnings: boolean) {
   if (mode === "proxy-test") {
-    return true;
+    return null;
   }
 
-  const messages: Partial<Record<WorkflowMode, string>> = {
-    "optimize-only": `优选前请确认：\n\n1. 已断开 VPN/代理，测速走本地直连。\n2. config.json、输出路径和本地 Python 状态已检查。\n${hasWarnings ? "\n当前预检有提示，确认仍继续？" : "\n确认开始只运行优选？"}`,
-    "optimize-sync": `优选前请确认：\n\n1. 已断开 VPN/代理，测速走本地直连。\n2. 优选完成后会按设置上传到 GitHub。\n${hasWarnings ? "\n当前预检有提示，确认仍继续？" : "\n确认开始优选并自动上传？"}`,
-    "sync-only": "上传前请确认：\n\n1. 当前 ip.txt 已是你要发布的结果。\n2. 已打开用于 GitHub 上传的代理。\n\n确认上传到 GitHub？"
+  const copies: Partial<Record<WorkflowMode, Omit<ConfirmRequest, "resolve">>> = {
+    "optimize-only": {
+      title: "优选前确认",
+      lines: [
+        "已断开 VPN/代理，测速走本地直连。",
+        "config.json、输出路径和本地 Python 状态已检查。",
+        hasWarnings ? "当前预检有提示，确认后仍会继续执行。" : "确认后开始只运行优选。"
+      ],
+      confirmLabel: "开始优选",
+      tone: "warning"
+    },
+    "optimize-sync": {
+      title: "优选并上传确认",
+      lines: [
+        "已断开 VPN/代理，测速走本地直连。",
+        "优选完成后会按设置同步到 GitHub。",
+        hasWarnings ? "当前预检有提示，确认后仍会继续执行。" : "确认后开始优选并自动上传。"
+      ],
+      confirmLabel: "开始执行",
+      tone: "warning"
+    },
+    "sync-only": {
+      title: "上传到 GitHub",
+      lines: [
+        "当前 ip.txt 已是你要发布的结果。",
+        "已打开用于 GitHub 上传的代理。",
+        "确认后只执行上传，不重新测速。"
+      ],
+      confirmLabel: "确认上传",
+      tone: "sync"
+    }
   };
 
-  return window.confirm(messages[mode] ?? "确认执行当前任务？");
+  return copies[mode] ?? null;
 }
 
 function IconBadge({ icon: Icon, tone }: { icon: typeof Play; tone: string }) {
@@ -304,14 +341,14 @@ function WorkbenchPage({
       <article className="glass-panel workbench-latest rounded-[28px] p-5">
         <h3 className="section-title">最新结果预览</h3>
         <p className="mt-2 text-sm text-slate-500">443 优先输出，客户端继续二次优选。</p>
-        <div className="mt-4 flex flex-wrap gap-7 text-sm">
-          <span className="text-slate-500">
+        <div className="summary-chips">
+          <span className="summary-chip">
             节点数 <strong className="ml-2 text-lg text-slate-950">{state.output_count}</strong>
           </span>
-          <span className="text-slate-500">
+          <span className="summary-chip">
             443 占比 <strong className="ml-2 text-lg text-blue-700">{state.port_share}</strong>
           </span>
-          <span className="text-slate-500">
+          <span className="summary-chip">
             更新时间 <strong className="ml-2 text-slate-950">{state.output_updated_at ?? "未生成"}</strong>
           </span>
         </div>
@@ -344,14 +381,14 @@ function ResultsPage({
       <article className="glass-panel rounded-[30px] p-5">
         <h3 className="section-title">ip.txt</h3>
         <p className="mt-2 text-sm text-slate-500">最终订阅源内容，格式保持 IP:port#CC。</p>
-        <div className="mt-4 flex flex-wrap gap-6 text-sm">
-          <span className="text-slate-500">
+        <div className="summary-chips">
+          <span className="summary-chip">
             总数 <strong className="ml-2 text-lg text-slate-950">{state.output_count}</strong>
           </span>
-          <span className="text-slate-500">
+          <span className="summary-chip">
             443 占比 <strong className="ml-2 text-lg text-blue-700">{state.port_share}</strong>
           </span>
-          <span className="text-slate-500">
+          <span className="summary-chip">
             更新时间 <strong className="ml-2 text-slate-950">{state.output_updated_at ?? "未生成"}</strong>
           </span>
         </div>
@@ -516,6 +553,50 @@ function LogsPage({ entries }: { entries: LogEntry[] }) {
   );
 }
 
+function ConfirmDialog({
+  request,
+  onClose
+}: {
+  request: ConfirmRequest | null;
+  onClose: (confirmed: boolean) => void;
+}) {
+  if (!request) {
+    return null;
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="workflow-confirm-title">
+        <button className="confirm-close" type="button" aria-label="关闭确认" onClick={() => onClose(false)}>
+          <X size={16} />
+        </button>
+        <div className={clsx("confirm-icon", `confirm-icon--${request.tone}`)}>
+          <AlertTriangle size={20} />
+        </div>
+        <div className="confirm-body">
+          <h2 id="workflow-confirm-title">{request.title}</h2>
+          <div className="confirm-lines">
+            {request.lines.map((line) => (
+              <div key={line} className="confirm-line">
+                <ChevronRight size={14} />
+                <span>{line}</span>
+              </div>
+            ))}
+          </div>
+          <div className="confirm-actions">
+            <button className="ghost-button" type="button" onClick={() => onClose(false)}>
+              取消
+            </button>
+            <button className="soft-button confirm-primary" type="button" onClick={() => onClose(true)}>
+              {request.confirmLabel}
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function App() {
   const fallback = useMemo(() => cloneFallbackState(), []);
   const [activePage, setActivePage] = useState<PageId>("workbench");
@@ -527,6 +608,7 @@ function App() {
   const [lastCommand, setLastCommand] = useState("等待手动操作");
   const [stateError, setStateError] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<WorkflowMode | "refresh" | "save" | "restore" | null>(null);
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const [activityLog, setActivityLog] = useState<LogEntry[]>([
     { time: nowLabel(), text: "等待手动操作", tone: "neutral" }
   ]);
@@ -539,6 +621,18 @@ function App() {
 
   function pushLog(text: string, tone: LogTone = "info") {
     setActivityLog((current) => [{ time: nowLabel(), text, tone }, ...current].slice(0, 12));
+  }
+
+  function askConfirmation(copy: Omit<ConfirmRequest, "resolve">) {
+    return new Promise<boolean>((resolve) => {
+      setConfirmRequest({ ...copy, resolve });
+    });
+  }
+
+  function closeConfirmation(confirmed: boolean) {
+    const current = confirmRequest;
+    setConfirmRequest(null);
+    current?.resolve(confirmed);
   }
 
   async function refreshState(reason = "刷新检查") {
@@ -578,11 +672,15 @@ function App() {
       pythonPath,
       proxyUrl
     });
-    if (!confirmWorkflowStart(mode, desktopState.preflight.has_warnings)) {
-      const cancelled = `${workflow.label} 已取消`;
-      setLastCommand(cancelled);
-      pushLog(cancelled, "neutral");
-      return;
+    const confirmCopy = buildWorkflowConfirmCopy(mode, desktopState.preflight.has_warnings);
+    if (confirmCopy) {
+      const confirmed = await askConfirmation(confirmCopy);
+      if (!confirmed) {
+        const cancelled = `${workflow.label} 已取消`;
+        setLastCommand(cancelled);
+        pushLog(cancelled, "neutral");
+        return;
+      }
     }
 
     const commandText = `${workflow.program} ${workflow.args.join(" ")}`;
@@ -850,6 +948,7 @@ function App() {
           {pageContent}
         </div>
       </section>
+      <ConfirmDialog request={confirmRequest} onClose={closeConfirmation} />
     </main>
   );
 }
