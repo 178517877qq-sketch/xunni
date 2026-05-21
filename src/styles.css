@@ -54,6 +54,32 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.34) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.32);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(71, 85, 105, 0.44);
+  background-clip: padding-box;
+}
+
 button,
 input,
 textarea {
@@ -363,6 +389,12 @@ textarea:focus-visible {
   border-radius: 31px;
 }
 
+.workflow-strip > .ml-auto {
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .workflow-strip span {
   display: inline-flex;
   align-items: center;
@@ -451,6 +483,16 @@ textarea:focus-visible {
 
 .action-tile span {
   overflow-wrap: anywhere;
+}
+
+.action-tile svg,
+.page-tab svg,
+.sidebar-item svg,
+.workflow-strip svg,
+.ghost-button svg,
+.secondary-button svg,
+.soft-button svg {
+  flex: 0 0 auto;
 }
 
 .action-tile.is-busy {
@@ -926,5 +968,144 @@ textarea:focus-visible {
   .workflow-strip {
     flex-wrap: wrap;
     height: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  body {
+    overflow: auto;
+  }
+
+  .app-shell {
+    min-height: 100vh;
+    height: auto;
+    display: block;
+    overflow: visible;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .workspace {
+    width: 100%;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+    padding: 22px 14px 28px;
+  }
+
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .topbar h1 {
+    font-size: 26px;
+    line-height: 1.2;
+  }
+
+  .page-tabs {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 7px;
+    scroll-snap-type: x proximity;
+  }
+
+  .page-tab {
+    min-width: 108px;
+    scroll-snap-align: start;
+  }
+
+  .notice-pill {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .notice-pill strong {
+    flex: 1 1 auto;
+  }
+
+  .workflow-strip {
+    width: 100%;
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .workflow-strip > span {
+    width: 100%;
+  }
+
+  .workflow-strip > .ml-auto {
+    width: 100%;
+    margin-left: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .dashboard-grid,
+  .results-grid {
+    gap: 16px;
+  }
+
+  .glass-panel {
+    border-radius: 26px;
+  }
+
+  .glass-panel.rounded-\[32px\],
+  .glass-panel.rounded-\[30px\],
+  .glass-panel.rounded-\[28px\] {
+    border-radius: 26px;
+  }
+
+  .glass-panel .flex.items-start.gap-5 {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .glass-panel .flex.items-center.justify-between.gap-4 {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .action-grid,
+  .tool-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .action-tile {
+    width: 100%;
+    min-height: 92px;
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .status-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .status-row > div:last-child {
+    grid-column: 2;
+    justify-self: start;
+    text-align: left;
+  }
+
+  .settings-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .settings-line {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-tabs {
+    width: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
   }
 }

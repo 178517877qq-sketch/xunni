@@ -50,6 +50,8 @@ class TauriShellTests(unittest.TestCase):
         self.assertIn("glass-panel", app)
         self.assertIn("sidebar-rail", app)
         self.assertIn("rounded-[32px]", app)
+        self.assertIn("action-grid", app)
+        self.assertIn("tool-grid", app)
         self.assertIn("aria-label={`侧栏-${item.label}`}", app)
         self.assertIn('aria-current={activePage === item.id ? "page" : undefined}', app)
         self.assertIn("box-shadow", css)
@@ -79,6 +81,15 @@ class TauriShellTests(unittest.TestCase):
         self.assertNotIn("border-radius: 0;", css)
         self.assertIn("overflow-wrap: anywhere", css)
         self.assertIn(":focus-visible", css)
+
+    def test_react_styles_have_narrow_viewport_guardrails(self):
+        css = (ROOT / "src" / "styles.css").read_text(encoding="utf-8")
+
+        self.assertIn("@media (max-width: 760px)", css)
+        self.assertIn(".sidebar {\n    display: none;", css)
+        self.assertIn("grid-template-columns: minmax(0, 1fr) !important", css)
+        self.assertIn("overflow-x: auto", css)
+        self.assertIn("scrollbar-color", css)
 
 
 if __name__ == "__main__":

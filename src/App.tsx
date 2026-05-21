@@ -241,7 +241,7 @@ function WorkbenchPage({
                 </span>
               </div>
 
-              <div className="mt-7 grid grid-cols-2 gap-4">
+              <div className="action-grid mt-7 grid grid-cols-2 gap-4">
                 {actionTiles.map((tile) => (
                   <ActionTile
                     key={tile.mode}
@@ -257,7 +257,7 @@ function WorkbenchPage({
 
         <article className="glass-panel rounded-[28px] p-5">
           <h3 className="section-title">工具</h3>
-          <div className="mt-4 grid grid-cols-3 gap-4">
+          <div className="tool-grid mt-4 grid grid-cols-3 gap-4">
             <button className="danger-button" disabled title="当前版本未接入后台任务中止">
               停止任务
             </button>
