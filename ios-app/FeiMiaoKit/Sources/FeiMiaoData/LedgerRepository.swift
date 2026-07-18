@@ -151,7 +151,7 @@ public final class LedgerRepository: @unchecked Sendable {
             let whereSQL = includeDeleted
                 ? ""
                 : "WHERE is_deleted = 0 AND status <> 'legacy_hidden'"
-            try Row.fetchAll(
+            return try Row.fetchAll(
                 db,
                 sql: "SELECT * FROM accounts \(whereSQL) ORDER BY sort_order, id"
             ).map(Self.account(from:))
