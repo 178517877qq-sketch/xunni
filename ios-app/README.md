@@ -1,59 +1,66 @@
-# 轻记 QingJi — iOS 极简记账
+# 肥喵记账 iOS
 
-「3 秒记一笔、漏了能补平、超支提前说」的本地优先 iOS 记账 App。
+当前生产方向是 `FeiMiao`：原生 SwiftUI 界面、GRDB/SQLite 数据层，并与 Android 肥喵的核心账务语义保持一致。iOS 采用系统导航、列表、表单、菜单、日期选择和照片选择，不机械复制 Android 布局。
 
-面向 **iOS 26+**，全面采用 **Liquid Glass（液态玻璃）** 设计语言：快记键盘、分类网格、统计卡片均使用 `glassEffect` 交互玻璃，TabBar 滚动自动收起。
+批次 1–5 的范围和不可变约束见 [`../docs/ios/FEIMIAO_IOS_BATCH_1_5_CONTRACT.md`](../docs/ios/FEIMIAO_IOS_BATCH_1_5_CONTRACT.md)。
 
-产品定位与市场调研见 [docs/product-analysis.md](../docs/product-analysis.md)。
+## 当前工程
 
-## 项目结构
-
-```
+```text
 ios-app/
-├── project.yml          # XcodeGen 工程定义（生成 QingJi.xcodeproj）
-├── QingJiCore/          # 平台无关核心逻辑（SwiftPM 包，可独立测试）
-│   ├── Sources/         #   金额输入、分类排序、统计引擎、账单导入导出
-│   └── Tests/           #   单元测试，macOS/Linux 均可运行
-├── QingJi/              # iOS App（SwiftUI + SwiftData）
-│   ├── Models/          #   SwiftData 模型、容器、种子数据
-│   ├── Views/           #   快记 / 明细 / 统计 / 设置
-│   └── Intents/         #   App Intents（Siri、快捷指令）
-└── QingJiWidget/        # 锁屏/桌面「记一笔」小组件
+├── project.yml               # XcodeGen：生成 FeiMiao.xcodeproj
+├── FeiMiao/                  # 当前 SwiftUI App
+│   ├── App/                  # AppStore、根 Tab 与启动入口
+│   ├── Components/           # 账单行、账本菜单、空状态
+│   ├── Design/               # 语义颜色与通用卡片
+│   └── Views/                # 首页、明细、搜索、记账、资料管理
+├── FeiMiaoKit/               # 当前 SwiftPM 核心包
+│   ├── Sources/FeiMiaoDomain # 定点金额、实体、稳定分类键
+│   ├── Sources/FeiMiaoData   # GRDB 仓储与 Android 备份导入
+│   └── Tests/                # 纯规则和数据库集成测试
+├── QingJi/                   # 旧 SwiftData 原型，仅作参考
+├── QingJiCore/               # 旧原型核心包
+└── QingJiWidget/             # 旧原型小组件
 ```
+
+`QingJi` 不再由当前 `project.yml` 构建，也不是新版数据迁移来源。
 
 ## 本地运行
 
-需要 macOS + **Xcode 26** 以上（Liquid Glass API 需要 iOS 26 SDK）。没有 Mac 时由 GitHub Actions（`.github/workflows/ios-ci.yml`）在云端 macOS 上自动编译和跑测试。
+完整 App 需要 macOS、Xcode 26 和 XcodeGen；部署目标为 iOS 18，因此也可在更新系统上运行。
 
 ```bash
 brew install xcodegen
 cd ios-app
-xcodegen generate        # 生成 QingJi.xcodeproj
-open QingJi.xcodeproj
+xcodegen generate --spec project.yml
+open FeiMiao.xcodeproj
 ```
 
-在 Xcode 中把 `QingJi` 与 `QingJiWidget` 两个 target 的 Bundle Identifier 改成你自己的（默认 `com.qingji.app`），选好签名 Team 后即可在真机/模拟器运行。
+在 Xcode 中选择 `FeiMiao` scheme。模拟器构建不需要签名；真机安装需要选择自己的 Apple Team 并换成可用的 Bundle Identifier。
 
-## 跑核心逻辑测试
+## 自动化测试
 
 ```bash
-cd ios-app/QingJiCore
-swift test
+swift test --package-path ios-app/FeiMiaoKit --parallel
 ```
 
-## 开启 iCloud 同步（可选）
+测试覆盖十进制定点金额、稳定分类树、CRUD 重启持久化、总账本聚合、搜索、转账账户守恒、软删除、账户归档、时间精度、附件引用，以及 Android v40 原始数据库/完整 ZIP 备份导入。
 
-数据默认只存本地。在 Xcode 中为 `QingJi` target 添加 **iCloud → CloudKit** 能力并勾选一个容器后，SwiftData 会自动开始同步（数据模型已按 CloudKit 要求设计：全部默认值、可选关系、无唯一约束）。
+Windows 本机没有 iOS SDK，不能编译 SwiftUI App；`.github/workflows/ios-ci.yml` 会在 macOS 上运行 SwiftPM 测试、生成 Xcode 工程、构建并冷启动 Simulator App，再生成两个下载产物：
 
-## 快捷指令「双击背面记账」玩法
+- `FeiMiao-Appetize.zip`：上传到 Appetize 的模拟器包。
+- `FeiMiao-unsigned.ipa`：未签名设备包，需用自己的 Apple ID/证书重签。
 
-1. App 安装后，「快速记一笔」会自动出现在快捷指令 App 中；
-2. 新建快捷指令：截屏 → 从屏幕截图提取文本（OCR）→ 匹配金额 → 调用「快速记一笔」；
-3. 设置 → 辅助功能 → 触控 → 轻点背面 → 双击，绑定该快捷指令；
-4. 在微信/支付宝支付完成页双击手机背面即可自动入账。
+## Android 备份兼容
 
-## 路线图
+设置页可选择 Android 肥喵导出的 `.zip`，也兼容旧 `.db/.bak`。导入流程不会直接把 Android 数据库作为 iOS 在线库使用，而是：
 
-- **Phase 1（当前）**：极简快记、分类智能排序、账户与转账、明细、月统计、小组件、快捷指令、CSV 导入导出、中英双语
-- **Phase 2**：AI 录入（自然语言/语音/截图票据识别）、自动分类学习
-- **Phase 3**：预算与「今日可花」、每周对账（账平机制）、消费年报、家庭共享账本
+1. 校验备份格式、路径、文件清单、CRC 和 SHA-256；
+2. 只读解析 Android 核心表；
+3. 把缺失的 iOS 同步字段补为稳定值；
+4. 先用 SQLite 一致性快照保留导入前的 iOS 数据（最多 3 份）；
+5. 在单个 SQLite 事务中替换账本、账户、分类、标签和账单；
+6. 以流式方式解压数据库和收据并设置逐项/总量上限，避免大备份占满内存；
+7. 把备份内收据复制到 iOS 沙盒并重写附件路径。
+
+API Key 不从 Android 备份带入。预算 V2、统计、AI、资产以及退款/报销到账交互不属于批次 1–5。

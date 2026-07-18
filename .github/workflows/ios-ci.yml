@@ -2,230 +2,219 @@ name: iOS CI
 
 on:
   push:
-    branches: [claude/new-session-4kh1ll, main]
+    branches:
+      - main
+      - codex/ios-feimiao-batch-1-5
     paths:
-      - "ios-app/**"
+      - "ios-app/FeiMiao/**"
+      - "ios-app/FeiMiaoKit/**"
+      - "ios-app/project.yml"
+      - ".github/workflows/ios-ci.yml"
+  pull_request:
+    paths:
+      - "ios-app/FeiMiao/**"
+      - "ios-app/FeiMiaoKit/**"
+      - "ios-app/project.yml"
       - ".github/workflows/ios-ci.yml"
   workflow_dispatch:
 
+concurrency:
+  group: ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  core-tests:
-    name: 核心逻辑单元测试
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v5
-      - name: swift test (QingJiCore)
-        run: swift test --package-path ios-app/QingJiCore
-
-  build-app:
-    name: 编译 iOS App
-    # XcodeGen 生成的是 Xcode 16+ 工程格式（objectVersion 77）；Liquid Glass 需要 Xcode 26 SDK
+  swift-tests:
+    name: FeiMiaoKit tests
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v5
       - name: Select Xcode 26
+        shell: bash
         run: |
-          ls -d /Applications/Xcode*.app
-          XCODE_26=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n 1)
+          set -euo pipefail
+          XCODE_26=""
+          for candidate in /Applications/Xcode_26*.app; do
+            if [ -d "$candidate" ]; then XCODE_26="$candidate"; fi
+          done
           if [ -z "$XCODE_26" ]; then
-            echo "::error::runner 上没有 Xcode 26，无法编译 iOS 26 / Liquid Glass 工程"
+            echo "::error::runner 上没有 Xcode 26"
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_26"
+          xcodebuild -version
+          swift --version
+      - name: Resolve and test FeiMiaoKit
+        run: swift test --package-path ios-app/FeiMiaoKit --parallel
+
+  simulator-app:
+    name: Simulator build and launch
+    runs-on: macos-15
+    needs: swift-tests
+    steps:
+      - uses: actions/checkout@v5
+      - name: Select Xcode 26
+        shell: bash
+        run: |
+          set -euo pipefail
+          XCODE_26=""
+          for candidate in /Applications/Xcode_26*.app; do
+            if [ -d "$candidate" ]; then XCODE_26="$candidate"; fi
+          done
+          if [ -z "$XCODE_26" ]; then
+            echo "::error::runner 上没有 Xcode 26"
             exit 1
           fi
           sudo xcode-select -s "$XCODE_26"
           xcodebuild -version
       - name: Install XcodeGen
-        run: brew install xcodegen
+        run: |
+          brew install xcodegen
+          xcodegen --version
       - name: Generate Xcode project
         run: xcodegen generate --spec ios-app/project.yml --project ios-app
-      - name: Build for iOS Simulator (no signing)
+      - name: Build for iOS Simulator
+        shell: bash
         run: |
+          set -euo pipefail
           xcodebuild build \
-            -project ios-app/QingJi.xcodeproj \
-            -scheme QingJi \
+            -project ios-app/FeiMiao.xcodeproj \
+            -scheme FeiMiao \
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build-simulator \
-            CODE_SIGNING_ALLOWED=NO \
-            | tail -100
-          exit ${PIPESTATUS[0]}
-      - name: Package simulator app for Appetize
+            CODE_SIGNING_ALLOWED=NO
+      - name: Launch smoke test
+        shell: bash
         run: |
-          APP_PATH="build-simulator/Build/Products/Debug-iphonesimulator/QingJi.app"
-          if [ ! -d "$APP_PATH" ]; then
-            echo "::error::Simulator app was not produced at $APP_PATH"
-            find build-simulator/Build/Products -name "*.app" -print || true
-            exit 1
-          fi
-          ditto -c -k --keepParent "$APP_PATH" QingJi-simulator.zip
-          unzip -tq QingJi-simulator.zip
-          file "$APP_PATH/QingJi"
-          ls -lh QingJi-simulator.zip
-      - uses: actions/upload-artifact@v4
-        with:
-          name: QingJi-simulator-app
-          path: QingJi-simulator.zip
-
-  simulator-screenshots:
-    name: 模拟器截图
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v5
-      - name: Select Xcode 26
-        run: |
-          XCODE_26=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n 1)
-          if [ -z "$XCODE_26" ]; then
-            echo "::error::runner 上没有 Xcode 26"
-            exit 1
-          fi
-          sudo xcode-select -s "$XCODE_26"
-      - name: Install XcodeGen
-        run: brew install xcodegen
-      - name: Generate Xcode project
-        run: xcodegen generate --spec ios-app/project.yml --project ios-app
-      - name: Build for a concrete simulator
-        run: |
-          DEVICE=$(xcrun simctl list devices available | grep "iPhone" | head -n 1 | sed -E 's/^[[:space:]]*//; s/ \(.*$//')
+          set -euo pipefail
+          DEVICE=$(xcrun simctl list devices available | awk '
+            !found && /^[[:space:]]*iPhone/ && /\(Shutdown\)$/ {
+              line=$0
+              sub(/^[^(]*\(/, "", line)
+              sub(/\).*/, "", line)
+              print line
+              found=1
+            }
+          ')
           if [ -z "$DEVICE" ]; then
             echo "::error::没有可用的 iPhone 模拟器"
-            xcrun simctl list devices
+            xcrun simctl list devices available
             exit 1
           fi
-          echo "DEVICE=$DEVICE" >> "$GITHUB_ENV"
-          echo "使用模拟器：$DEVICE"
-          xcodebuild build \
-            -project ios-app/QingJi.xcodeproj \
-            -scheme QingJi \
-            -destination "platform=iOS Simulator,name=$DEVICE" \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
-            | tail -30
-          exit ${PIPESTATUS[0]}
-      - name: Launch app and capture screenshots
-        run: |
+          shopt -s nullglob
+          APPS=(build-simulator/Build/Products/*Debug-iphonesimulator/FeiMiao.app)
+          APP_PATH="${APPS[0]:-}"
+          test -d "$APP_PATH"
+          xcrun simctl boot "$DEVICE" || true
           xcrun simctl bootstatus "$DEVICE" -b
-          APP_PATH=$(find build/Build/Products -name "QingJi.app" -not -path "*PlugIns*" | head -n 1)
-          echo "安装：$APP_PATH"
           xcrun simctl install "$DEVICE" "$APP_PATH"
           mkdir -p screenshots
-
-          # 用「重启 + 启动参数」而不是 openurl 切页面：
-          # simctl openurl 对自定义 scheme 会弹出系统「Open in App?」确认框，CI 无法点击，
-          # 导致所有截图卡在同一个画面。改成每张图用 SIMCTL_CHILD_QINGJI_SCREEN 指定页面冷启动。
-          # （SIMCTL_CHILD_ 前缀的环境变量会被 simctl 转发给 App。）
-          shoot() {
-            local screen="$1" name="$2"
-            xcrun simctl terminate "$DEVICE" com.qingji.app 2>/dev/null || true
-            sleep 1
-            SIMCTL_CHILD_QINGJI_DEMO=1 SIMCTL_CHILD_QINGJI_SCREEN="$screen" \
-              xcrun simctl launch "$DEVICE" com.qingji.app
-            sleep 5
-            xcrun simctl io "$DEVICE" screenshot "screenshots/$name.png"
+          capture_logs() {
+            xcrun simctl spawn "$DEVICE" log show \
+              --style compact --last 2m \
+              --predicate 'process == "FeiMiao"' > screenshots/simulator.log || true
           }
-
-          shoot "quickadd"     "01-quickadd"
-          shoot "transactions" "02-transactions"
-          shoot "stats-month"  "03-stats-month"
-          shoot "stats-year"   "04-stats-year"
-          shoot "budget"       "05-budget"
-          shoot "reconcile"    "06-reconcile"
-          shoot "settings"     "07-settings"
-          shoot "ai"           "08-ai"
-
-          # 校验：8 张图若全部相同（md5 唯一值=1）说明导航又失败了，直接让 CI 报错
-          UNIQUE=$(md5 -q screenshots/*.png | sort -u | wc -l | tr -d ' ')
-          echo "不同截图数量：$UNIQUE / 8"
-          if [ "$UNIQUE" -le 1 ]; then
-            echo "::error::8 张截图完全相同，深链/启动参数导航未生效"
-            exit 1
-          fi
+          trap capture_logs EXIT
+          LAUNCH_OUTPUT=$(xcrun simctl launch "$DEVICE" com.feimiao.app)
+          echo "$LAUNCH_OUTPUT"
+          LAUNCH_PID="${LAUNCH_OUTPUT##*: }"
+          [[ "$LAUNCH_PID" =~ ^[0-9]+$ ]]
+          sleep 5
+          kill -0 "$LAUNCH_PID"
+          xcrun simctl get_app_container "$DEVICE" com.feimiao.app data
+          xcrun simctl io "$DEVICE" screenshot screenshots/01-home.png
+          xcrun simctl terminate "$DEVICE" com.feimiao.app
+          SECOND_LAUNCH=$(xcrun simctl launch "$DEVICE" com.feimiao.app)
+          echo "$SECOND_LAUNCH"
+          SECOND_PID="${SECOND_LAUNCH##*: }"
+          [[ "$SECOND_PID" =~ ^[0-9]+$ ]]
+          sleep 2
+          kill -0 "$SECOND_PID"
+          capture_logs
+          trap - EXIT
+          xcrun simctl terminate "$DEVICE" com.feimiao.app
+      - name: Upload simulator diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FeiMiao-simulator-diagnostics
+          path: screenshots/
+          if-no-files-found: ignore
+      - name: Package Appetize-compatible simulator app
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          APPS=(build-simulator/Build/Products/*Debug-iphonesimulator/FeiMiao.app)
+          APP_PATH="${APPS[0]:-}"
+          test -d "$APP_PATH"
+          ditto -c -k --keepParent "$APP_PATH" FeiMiao-Appetize.zip
+          unzip -tq FeiMiao-Appetize.zip
+          file "$APP_PATH/FeiMiao"
+          ls -lh FeiMiao-Appetize.zip screenshots/01-home.png
       - uses: actions/upload-artifact@v4
         with:
-          name: simulator-screenshots
-          path: screenshots/
-      # 把截图提交回分支，方便在受限网络环境（或手机上）直接查看
-      - name: Commit screenshots back to branch
-        if: github.event_name == 'push'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          mkdir -p ci-artifacts
-          rm -rf ci-artifacts/screenshots
-          cp -R screenshots ci-artifacts/screenshots
-          git add ci-artifacts
-          if git diff --cached --quiet; then
-            echo "截图无变化，跳过提交"
-            exit 0
-          fi
-          git commit -m "ci: 更新模拟器截图 [skip ci]"
-          git pull --rebase origin "${GITHUB_REF_NAME}"
-          git push origin HEAD:"${GITHUB_REF_NAME}"
+          name: FeiMiao-Appetize
+          path: |
+            FeiMiao-Appetize.zip
+            screenshots/01-home.png
+            screenshots/simulator.log
+          if-no-files-found: error
 
   unsigned-ipa:
-    name: 打包未签名 IPA（AltStore 侧载用）
+    name: Unsigned device IPA
     runs-on: macos-15
+    needs: swift-tests
     steps:
       - uses: actions/checkout@v5
       - name: Select Xcode 26
+        shell: bash
         run: |
-          XCODE_26=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n 1)
+          set -euo pipefail
+          XCODE_26=""
+          for candidate in /Applications/Xcode_26*.app; do
+            if [ -d "$candidate" ]; then XCODE_26="$candidate"; fi
+          done
           if [ -z "$XCODE_26" ]; then
             echo "::error::runner 上没有 Xcode 26"
             exit 1
           fi
           sudo xcode-select -s "$XCODE_26"
       - name: Install XcodeGen
-        run: brew install xcodegen
+        run: |
+          brew install xcodegen
+          xcodegen --version
       - name: Generate Xcode project
         run: xcodegen generate --spec ios-app/project.yml --project ios-app
-      - name: Build Release for device (unsigned)
-        # iOS 设备 SDK 不允许 ad-hoc 签名，这里完全不签名，交给 Sideloadly/AltStore 重签
+      - name: Build unsigned device app
+        shell: bash
         run: |
+          set -euo pipefail
           xcodebuild build \
-            -project ios-app/QingJi.xcodeproj \
-            -scheme QingJi \
+            -project ios-app/FeiMiao.xcodeproj \
+            -scheme FeiMiao \
             -configuration Release \
             -sdk iphoneos \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
-            | tail -30
-          exit ${PIPESTATUS[0]}
-      - name: Package IPA (完整版 + 无小组件版)
+            -derivedDataPath build-device \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Package IPA
+        shell: bash
         run: |
-          # 完整版（含桌面小组件）
-          mkdir -p Payload
-          cp -R build/Build/Products/Release-iphoneos/QingJi.app Payload/QingJi.app
-          zip -qry QingJi-unsigned.ipa Payload
-          # 无小组件版（剥掉 PlugIns，免费 Apple ID 侧载更易成功）
-          rm -rf Payload/QingJi.app/PlugIns
-          zip -qry QingJi-noext.ipa Payload
-          ls -lh QingJi-unsigned.ipa QingJi-noext.ipa
+          set -euo pipefail
+          shopt -s nullglob
+          APPS=(build-device/Build/Products/*Release-iphoneos/FeiMiao.app)
+          APP_PATH="${APPS[0]:-}"
+          test -d "$APP_PATH"
+          mkdir Payload
+          ditto "$APP_PATH" Payload/FeiMiao.app
+          zip -qry FeiMiao-unsigned.ipa Payload
+          unzip -tq FeiMiao-unsigned.ipa
+          ls -lh FeiMiao-unsigned.ipa
       - uses: actions/upload-artifact@v4
         with:
-          name: QingJi-unsigned-ipa
-          path: |
-            QingJi-unsigned.ipa
-            QingJi-noext.ipa
-      # 把 IPA 提交回分支，提供固定下载链接（Sideloadly/AltStore 侧载用）
-      - name: Commit IPA back to branch
-        if: github.event_name == 'push'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          mkdir -p ci-artifacts
-          cp QingJi-unsigned.ipa ci-artifacts/QingJi-unsigned.ipa
-          cp QingJi-noext.ipa ci-artifacts/QingJi-noext.ipa
-          git add ci-artifacts
-          if git diff --cached --quiet; then
-            echo "IPA 无变化，跳过提交"
-            exit 0
-          fi
-          git commit -m "ci: 更新 IPA（完整版 + 无小组件版）[skip ci]"
-          git pull --rebase origin "${GITHUB_REF_NAME}" || true
-          git push origin HEAD:"${GITHUB_REF_NAME}" || {
-            sleep 5
-            git pull --rebase origin "${GITHUB_REF_NAME}"
-            git push origin HEAD:"${GITHUB_REF_NAME}"
-          }
+          name: FeiMiao-unsigned-ipa
+          path: FeiMiao-unsigned.ipa
+          if-no-files-found: error

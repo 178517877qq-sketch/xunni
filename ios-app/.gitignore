@@ -1,5 +1,7 @@
 # XcodeGen 生成的工程文件，运行 xcodegen generate 重新生成
 QingJi.xcodeproj/
+FeiMiao.xcodeproj/
+FeiMiao/Info.plist
 
 # Xcode / SwiftPM 构建产物
 .build/

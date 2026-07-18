@@ -1,57 +1,44 @@
-name: QingJi
+name: FeiMiao
 options:
-  bundleIdPrefix: com.qingji
+  bundleIdPrefix: com.feimiao
   deploymentTarget:
-    iOS: "26.0"
+    iOS: "18.0"
   developmentLanguage: zh-Hans
 settings:
   base:
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
+    GENERATE_INFOPLIST_FILE: NO
 packages:
-  QingJiCore:
-    path: QingJiCore
+  FeiMiaoKit:
+    path: FeiMiaoKit
 targets:
-  QingJi:
+  FeiMiao:
     type: application
     platform: iOS
     sources:
-      - QingJi
+      - FeiMiao
     dependencies:
-      - package: QingJiCore
-      - target: QingJiWidget
+      - package: FeiMiaoKit
+        products:
+          - FeiMiaoDomain
+          - FeiMiaoData
     info:
-      path: QingJi/Info.plist
+      path: FeiMiao/Info.plist
       properties:
-        CFBundleDisplayName: 轻记
+        CFBundleDisplayName: 肥喵记账
         CFBundleShortVersionString: $(MARKETING_VERSION)
-        UILaunchScreen: {}
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen:
+          UIColorName: LaunchBackground
         ITSAppUsesNonExemptEncryption: false
-        CFBundleURLTypes:
-          - CFBundleURLName: com.qingji.app
-            CFBundleURLSchemes:
-              - qingji
-        NSMicrophoneUsageDescription: 语音记账需要使用麦克风。
-        NSSpeechRecognitionUsageDescription: 把你的话转成文字以便快速记账，识别在设备上完成。
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.qingji.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.feimiao.app
+        PRODUCT_NAME: FeiMiao
         TARGETED_DEVICE_FAMILY: "1"
-  QingJiWidget:
-    type: app-extension
-    platform: iOS
-    sources:
-      - QingJiWidget
-    dependencies:
-      - sdk: WidgetKit.framework
-      - sdk: SwiftUI.framework
-    info:
-      path: QingJiWidget/Info.plist
-      properties:
-        CFBundleDisplayName: 轻记
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.widgetkit-extension
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.qingji.app.widget
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
