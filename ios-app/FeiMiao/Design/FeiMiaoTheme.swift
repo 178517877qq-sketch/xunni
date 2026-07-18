@@ -23,6 +23,7 @@ extension Color {
         dark: (0.65, 0.73, 0.82)
     )
     static let fmPrimarySoft = fmPrimary.opacity(0.14)
+    static let fmCard = Color(uiColor: .secondarySystemGroupedBackground)
     static let fmIncome = adaptiveColor(
         light: (0.64, 0.43, 0.23),
         dark: (0.82, 0.64, 0.43)

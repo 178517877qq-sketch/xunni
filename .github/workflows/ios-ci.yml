@@ -79,13 +79,72 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p build-logs
+          BUILD_LOG=build-logs/simulator-xcodebuild.log
+          set +e
           xcodebuild build \
             -project ios-app/FeiMiao.xcodeproj \
             -scheme FeiMiao \
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build-simulator \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$BUILD_LOG"
+          XCODEBUILD_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$XCODEBUILD_STATUS" -ne 0 ]; then
+            python3 - "$BUILD_LOG" <<'PY'
+          import os
+          import re
+          import sys
+
+          log_path = sys.argv[1]
+          workspace = os.environ.get("GITHUB_WORKSPACE", "").rstrip("/")
+          pattern = re.compile(
+              r"^(?P<file>.+?\.swift):(?P<line>\d+):(?P<column>\d+): "
+              r"(?:fatal )?error: (?P<message>.+)$"
+          )
+
+          def escape_data(value: str) -> str:
+              return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+          def escape_property(value: str) -> str:
+              return escape_data(value).replace(":", "%3A").replace(",", "%2C")
+
+          seen = set()
+          annotations = 0
+          with open(log_path, encoding="utf-8", errors="replace") as log:
+              for raw_line in log:
+                  match = pattern.match(raw_line.rstrip("\r\n"))
+                  if match is None:
+                      continue
+                  file_path = match.group("file")
+                  if workspace and file_path.startswith(workspace + "/"):
+                      file_path = file_path[len(workspace) + 1:]
+                  diagnostic = (
+                      file_path,
+                      match.group("line"),
+                      match.group("column"),
+                      match.group("message"),
+                  )
+                  if diagnostic in seen:
+                      continue
+                  seen.add(diagnostic)
+                  print(
+                      "::error file={},line={},col={}::{}".format(
+                          escape_property(file_path),
+                          diagnostic[1],
+                          diagnostic[2],
+                          escape_data(diagnostic[3]),
+                      )
+                  )
+                  annotations += 1
+                  if annotations == 50:
+                      break
+          if annotations == 0:
+              print("::error::xcodebuild failed; inspect the uploaded simulator build log for details")
+          PY
+            exit "$XCODEBUILD_STATUS"
+          fi
       - name: Launch smoke test
         shell: bash
         run: |
@@ -141,7 +200,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FeiMiao-simulator-diagnostics
-          path: screenshots/
+          path: |
+            build-logs/simulator-xcodebuild.log
+            screenshots/
           if-no-files-found: ignore
       - name: Package Appetize-compatible simulator app
         shell: bash
@@ -193,13 +254,79 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p build-logs
+          BUILD_LOG=build-logs/device-xcodebuild.log
+          set +e
           xcodebuild build \
             -project ios-app/FeiMiao.xcodeproj \
             -scheme FeiMiao \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build-device \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$BUILD_LOG"
+          XCODEBUILD_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$XCODEBUILD_STATUS" -ne 0 ]; then
+            python3 - "$BUILD_LOG" <<'PY'
+          import os
+          import re
+          import sys
+
+          log_path = sys.argv[1]
+          workspace = os.environ.get("GITHUB_WORKSPACE", "").rstrip("/")
+          pattern = re.compile(
+              r"^(?P<file>.+?\.swift):(?P<line>\d+):(?P<column>\d+): "
+              r"(?:fatal )?error: (?P<message>.+)$"
+          )
+
+          def escape_data(value: str) -> str:
+              return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+          def escape_property(value: str) -> str:
+              return escape_data(value).replace(":", "%3A").replace(",", "%2C")
+
+          seen = set()
+          annotations = 0
+          with open(log_path, encoding="utf-8", errors="replace") as log:
+              for raw_line in log:
+                  match = pattern.match(raw_line.rstrip("\r\n"))
+                  if match is None:
+                      continue
+                  file_path = match.group("file")
+                  if workspace and file_path.startswith(workspace + "/"):
+                      file_path = file_path[len(workspace) + 1:]
+                  diagnostic = (
+                      file_path,
+                      match.group("line"),
+                      match.group("column"),
+                      match.group("message"),
+                  )
+                  if diagnostic in seen:
+                      continue
+                  seen.add(diagnostic)
+                  print(
+                      "::error file={},line={},col={}::{}".format(
+                          escape_property(file_path),
+                          diagnostic[1],
+                          diagnostic[2],
+                          escape_data(diagnostic[3]),
+                      )
+                  )
+                  annotations += 1
+                  if annotations == 50:
+                      break
+          if annotations == 0:
+              print("::error::xcodebuild failed; inspect the uploaded device build log for details")
+          PY
+            exit "$XCODEBUILD_STATUS"
+          fi
+      - name: Upload device build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FeiMiao-device-build-diagnostics
+          path: build-logs/device-xcodebuild.log
+          if-no-files-found: ignore
       - name: Package IPA
         shell: bash
         run: |

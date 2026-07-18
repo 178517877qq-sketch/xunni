@@ -68,7 +68,7 @@ struct HomeView: View {
                         .foregroundStyle(.secondary)
                     Text(store.summary.income.yuanText)
                         .font(.headline.monospacedDigit())
-                        .foregroundStyle(.fmIncome)
+                        .foregroundStyle(Color.fmIncome)
                     Text("结余 \(store.summary.balance.yuanText)")
                         .font(.caption)
                         .foregroundStyle(.secondary)

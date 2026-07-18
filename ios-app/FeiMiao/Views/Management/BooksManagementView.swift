@@ -91,7 +91,7 @@ struct BooksManagementView: View {
                         if isDefault {
                             Text("默认")
                                 .font(.caption2.weight(.medium))
-                                .foregroundStyle(.fmPrimary)
+                                .foregroundStyle(Color.fmPrimary)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(Color.fmPrimarySoft, in: Capsule())
@@ -113,7 +113,7 @@ struct BooksManagementView: View {
 
                 if book.isStarred {
                     Image(systemName: "star.fill")
-                        .foregroundStyle(.fmIncome)
+                        .foregroundStyle(Color.fmIncome)
                         .accessibilityLabel("已加星")
                 }
                 Image(systemName: "chevron.right")

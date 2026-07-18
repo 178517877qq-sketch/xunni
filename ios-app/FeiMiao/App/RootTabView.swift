@@ -43,7 +43,7 @@ struct RootTabView: View {
                     VStack(spacing: 14) {
                         Image(systemName: "cat.fill")
                             .font(.system(size: 42, weight: .medium))
-                            .foregroundStyle(.fmPrimary)
+                            .foregroundStyle(Color.fmPrimary)
                         ProgressView(store.isImportingBackup ? "正在校验并导入备份…" : "正在打开本月账本…")
                             .tint(.fmPrimary)
                     }

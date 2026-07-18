@@ -422,7 +422,7 @@ private struct CategorySelectionView: View {
                 Spacer()
                 if selection == category.id {
                     Image(systemName: "checkmark")
-                        .foregroundStyle(.fmPrimary)
+                        .foregroundStyle(Color.fmPrimary)
                 }
             }
         }
@@ -448,7 +448,7 @@ private struct TagSelectionView: View {
                     Spacer()
                     if selection.contains(tag.id) {
                         Image(systemName: "checkmark")
-                            .foregroundStyle(.fmPrimary)
+                            .foregroundStyle(Color.fmPrimary)
                     }
                 }
             }

@@ -201,7 +201,7 @@ private struct CategoryEditorView: View {
 
     private var parentChoices: [LedgerCategory] {
         let preservedParentID = category?.parentID
-        store.categories
+        return store.categories
             .filter {
                 $0.kind == kind && $0.parentID == nil
                     && (!$0.isHidden || $0.id == preservedParentID)

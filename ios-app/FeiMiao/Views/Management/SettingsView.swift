@@ -82,7 +82,7 @@ struct SettingsView: View {
 
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "lock.shield")
-                            .foregroundStyle(.fmHealthy)
+                            .foregroundStyle(Color.fmHealthy)
                             .frame(width: 24)
                         VStack(alignment: .leading, spacing: 3) {
                             Text("账务数据保存在你的设备上")
