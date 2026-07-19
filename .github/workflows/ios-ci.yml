@@ -151,13 +151,19 @@ jobs:
           set -euo pipefail
           STAGE="selecting an available iPhone simulator"
           DEVICE=$(xcrun simctl list devices available | awk '
-            !found && /^[[:space:]]*iPhone/ && /\(Shutdown\)$/ {
+            /^[[:space:]]*iPhone/ {
               line=$0
               sub(/^[^(]*\(/, "", line)
               sub(/\).*/, "", line)
-              print line
-              found=1
+              if (line !~ /^[0-9A-Fa-f-]+$/) next
+              if ($0 ~ /\(Booted\)$/) {
+                print line
+                found=1
+                exit
+              }
+              if (fallback == "") fallback=line
             }
+            END { if (!found && fallback != "") print fallback }
           ')
           if [ -z "$DEVICE" ]; then
             echo "::error::没有可用的 iPhone 模拟器"
