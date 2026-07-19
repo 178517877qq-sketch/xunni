@@ -1,8 +1,8 @@
 # 肥喵记账 iOS
 
-当前生产方向是 `FeiMiao`：原生 SwiftUI 界面、GRDB/SQLite 数据层，并与 Android 肥喵的核心账务语义保持一致。iOS 采用系统导航、列表、表单、菜单、日期选择和照片选择，不机械复制 Android 布局。
+当前生产方向是 `FeiMiao`：用 SwiftUI 原生实现 Android 肥喵记账的同款 iOS 版本。Android 当前产品是可见界面、信息架构、品牌素材、功能语义和操作路径的唯一基准；SwiftUI 只负责实现，不授权改成通用 iOS 模板。系统原生能力只用于键盘、安全区、权限、触感反馈和侧滑返回等不会改变产品身份的边界。
 
-批次 1–5 的范围和不可变约束见 [`../docs/ios/FEIMIAO_IOS_BATCH_1_5_CONTRACT.md`](../docs/ios/FEIMIAO_IOS_BATCH_1_5_CONTRACT.md)。
+最新不可变约束见 [`../docs/ios/FEIMIAO_IOS_PARITY_CONTRACT.md`](../docs/ios/FEIMIAO_IOS_PARITY_CONTRACT.md)。旧批次 1–5 合同只保留数据地基和历史记录价值；其中 `TabView`、系统大标题、通用 `List/Form` 优先等展示决策已作废。
 
 ## 当前工程
 
@@ -10,7 +10,7 @@
 ios-app/
 ├── project.yml               # XcodeGen：生成 FeiMiao.xcodeproj
 ├── FeiMiao/                  # 当前 SwiftUI App
-│   ├── App/                  # AppStore、根 Tab 与启动入口
+│   ├── App/                  # AppStore、推开式抽屉根壳与启动入口
 │   ├── Components/           # 账单行、账本菜单、空状态
 │   ├── Design/               # 语义颜色与通用卡片
 │   └── Views/                # 首页、明细、搜索、记账、资料管理

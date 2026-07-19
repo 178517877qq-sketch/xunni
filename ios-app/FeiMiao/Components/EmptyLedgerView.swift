@@ -7,15 +7,33 @@ struct EmptyLedgerView: View {
     var action: (() -> Void)?
 
     var body: some View {
-        ContentUnavailableView {
-            Label(title, systemImage: "cat.fill")
-        } description: {
+        VStack(spacing: 10) {
+            MascotView(mood: .empty, size: 168, animated: true)
+
+            Text(title)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(Color.primary)
+
             Text(message)
-        } actions: {
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(Color.fmSecondaryText)
+                .multilineTextAlignment(.center)
+
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
-                    .buttonStyle(.borderedProminent)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.primary)
+                    .padding(.horizontal, 18)
+                    .frame(height: 40)
+                    .background(Color.fmCard, in: Capsule())
+                    .overlay { Capsule().stroke(Color.fmHairline, lineWidth: 0.5) }
+                    .buttonStyle(.feiMiaoPressable)
+                    .padding(.top, 4)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
+        .background(FeiMiaoPageBackground().ignoresSafeArea())
+        .accessibilityElement(children: .contain)
     }
 }

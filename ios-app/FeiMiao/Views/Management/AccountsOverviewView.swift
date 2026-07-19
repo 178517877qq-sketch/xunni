@@ -92,6 +92,16 @@ struct AccountsManagementView: View {
             }
         }
         .navigationTitle("账户")
+        .overlay {
+            if store.isLedgerLoading && store.accountBalances.isEmpty {
+                ZStack {
+                    FeiMiaoPageBackground()
+                    ProgressView("正在读取账户余额…")
+                        .tint(.fmPrimary)
+                }
+                .ignoresSafeArea(edges: .bottom)
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {

@@ -12,6 +12,7 @@ public enum LedgerRepositoryError: LocalizedError, Equatable {
     case inactiveAccount
     case invalidAccountStatus
     case invalidCategoryParent
+    case invalidDateRange
     case recordNotFound
 
     public var errorDescription: String? {
@@ -25,6 +26,7 @@ public enum LedgerRepositoryError: LocalizedError, Equatable {
         case .inactiveAccount: "归档账户不能用于新的记账，请先恢复账户"
         case .invalidAccountStatus: "账户状态无效"
         case .invalidCategoryParent: "二级分类必须归属于同类型的可见一级分类"
+        case .invalidDateRange: "日期范围无效"
         case .recordNotFound: "记录不存在或已被删除"
         }
     }
@@ -644,6 +646,126 @@ public final class LedgerRepository: @unchecked Sendable {
             if item.refundOf == nil { count += 1 }
         }
         return LedgerSummary(expense: expense, income: income, transactionCount: count)
+    }
+
+    /// Loads the home list, summary, and attached-refund net amounts from one
+    /// isolated database read. The upper date bound is intentionally exclusive.
+    public func homeMonthSnapshot(
+        bookID: Int64?,
+        monthStart: Date,
+        nextMonthStart: Date
+    ) throws -> HomeMonthSnapshot {
+        guard monthStart < nextMonthStart else {
+            throw LedgerRepositoryError.invalidDateRange
+        }
+        let startMS = Int64(monthStart.timeIntervalSince1970 * 1_000)
+        let endMS = Int64(nextMonthStart.timeIntervalSince1970 * 1_000)
+
+        return try database.queue.read { db in
+            let roots: [LedgerTransaction]
+            let refunds: [LedgerTransaction]
+            if let bookID {
+                roots = try Row.fetchAll(
+                    db,
+                    sql: """
+                        SELECT * FROM transactions
+                        WHERE is_deleted = 0 AND refund_of IS NULL
+                          AND date_ms >= ? AND date_ms < ? AND book_id = ?
+                        ORDER BY date_ms DESC, id DESC
+                        """,
+                    arguments: [startMS, endMS, bookID]
+                ).map(Self.transaction(from:))
+                refunds = try Row.fetchAll(
+                    db,
+                    sql: """
+                        SELECT refund.* FROM transactions AS refund
+                        JOIN transactions AS root ON root.id = refund.refund_of
+                        WHERE refund.is_deleted = 0
+                          AND root.is_deleted = 0 AND root.refund_of IS NULL
+                          AND root.date_ms >= ? AND root.date_ms < ? AND root.book_id = ?
+                        ORDER BY refund.id ASC
+                        """,
+                    arguments: [startMS, endMS, bookID]
+                ).map(Self.transaction(from:))
+            } else {
+                let totalBookPredicate = """
+                    book_id IN (
+                      SELECT id FROM books
+                      WHERE is_deleted = 0 AND include_in_total = 1
+                    )
+                    """
+                roots = try Row.fetchAll(
+                    db,
+                    sql: """
+                        SELECT * FROM transactions
+                        WHERE is_deleted = 0 AND refund_of IS NULL
+                          AND date_ms >= ? AND date_ms < ?
+                          AND \(totalBookPredicate)
+                        ORDER BY date_ms DESC, id DESC
+                        """,
+                    arguments: [startMS, endMS]
+                ).map(Self.transaction(from:))
+                refunds = try Row.fetchAll(
+                    db,
+                    sql: """
+                        SELECT refund.* FROM transactions AS refund
+                        JOIN transactions AS root ON root.id = refund.refund_of
+                        WHERE refund.is_deleted = 0
+                          AND root.is_deleted = 0 AND root.refund_of IS NULL
+                          AND root.date_ms >= ? AND root.date_ms < ?
+                          AND root.\(totalBookPredicate)
+                        ORDER BY refund.id ASC
+                        """,
+                    arguments: [startMS, endMS]
+                ).map(Self.transaction(from:))
+            }
+
+            var netAmounts = Dictionary(uniqueKeysWithValues: roots.map { ($0.id, $0.amount) })
+            for refund in refunds {
+                guard let rootID = refund.refundOf, let current = netAmounts[rootID] else { continue }
+                netAmounts[rootID] = current + refund.amount
+            }
+
+            var expense = MoneyAmount.zero
+            var income = MoneyAmount.zero
+            var count = 0
+            for item in roots where !item.isExcluded {
+                let netAmount = netAmounts[item.id] ?? item.amount
+                switch item.kind {
+                case .expense: expense = expense + netAmount
+                case .income: income = income + netAmount
+                case .transfer: break
+                }
+                count += 1
+            }
+
+            return HomeMonthSnapshot(
+                bookID: bookID,
+                monthStart: monthStart,
+                nextMonthStart: nextMonthStart,
+                transactions: roots,
+                summary: LedgerSummary(
+                    expense: expense,
+                    income: income,
+                    transactionCount: count
+                ),
+                netAmounts: netAmounts
+            )
+        }
+    }
+
+    public func hasAnyVisibleTransaction() throws -> Bool {
+        try database.queue.read { db in
+            try Int.fetchOne(
+                db,
+                sql: """
+                    SELECT EXISTS(
+                      SELECT 1 FROM transactions
+                      WHERE is_deleted = 0 AND refund_of IS NULL
+                    )
+                    """
+            ) == 1
+        }
     }
 
     private func allTransactionsIncludingRefunds() throws -> [LedgerTransaction] {

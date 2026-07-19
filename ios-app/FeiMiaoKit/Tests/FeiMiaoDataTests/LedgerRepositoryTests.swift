@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 import XCTest
 @testable import FeiMiaoData
 @testable import FeiMiaoDomain
@@ -373,6 +374,126 @@ final class LedgerRepositoryTests: XCTestCase {
         XCTAssertEqual(try repository.setting(for: "sample"), "second")
         try repository.setSetting(nil, for: "sample")
         XCTAssertNil(try repository.setting(for: "sample"))
+    }
+
+    func testHomeMonthSnapshotUsesExclusiveBoundsAndRefundNetAmounts() throws {
+        let repository = try inMemoryRepository()
+        XCTAssertFalse(try repository.hasAnyVisibleTransaction())
+        let bookID = try repository.defaultBookID()
+        let accountID = try XCTUnwrap(repository.accounts().first?.id)
+        let separateBook = try repository.createBook(name: "Separate", includeInTotal: false)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
+        let monthStart = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 6, day: 1))
+        )
+        let nextMonthStart = try XCTUnwrap(calendar.date(byAdding: .month, value: 1, to: monthStart))
+
+        let root = try repository.saveTransaction(
+            TransactionDraft(
+                bookID: bookID,
+                kind: .expense,
+                amountText: "100",
+                accountID: accountID,
+                note: "month start",
+                date: monthStart
+            )
+        )
+        let lastInside = try repository.saveTransaction(
+            TransactionDraft(
+                bookID: bookID,
+                kind: .income,
+                amountText: "50",
+                accountID: accountID,
+                note: "last millisecond",
+                date: nextMonthStart.addingTimeInterval(-0.001)
+            )
+        )
+        let excluded = try repository.saveTransaction(
+            TransactionDraft(
+                bookID: bookID,
+                amountText: "999",
+                accountID: accountID,
+                note: "excluded",
+                date: monthStart.addingTimeInterval(86_400),
+                isExcluded: true
+            )
+        )
+        let nextMonthRecord = try repository.saveTransaction(
+            TransactionDraft(
+                bookID: bookID,
+                amountText: "30",
+                accountID: accountID,
+                note: "next month",
+                date: nextMonthStart
+            )
+        )
+        let separateRecord = try repository.saveTransaction(
+            TransactionDraft(
+                bookID: separateBook.id,
+                amountText: "400",
+                accountID: accountID,
+                note: "not in total",
+                date: monthStart.addingTimeInterval(172_800)
+            )
+        )
+
+        let refundDateMS = Int64(
+            nextMonthStart.addingTimeInterval(86_400).timeIntervalSince1970 * 1_000
+        )
+        let nowMS = Int64(Date().timeIntervalSince1970 * 1_000)
+        try repository.database.queue.write { db in
+            try db.execute(
+                sql: """
+                    INSERT INTO transactions
+                    (uuid, book_id, kind, amount, currency_code, account_id, note, date_ms,
+                     time_precision, refund_of, created_ms, updated_ms, is_deleted)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                    """,
+                arguments: [
+                    UUID().uuidString, bookID, TransactionKind.expense.rawValue, "-25", "CNY",
+                    accountID, "refund", refundDateMS, TransactionTimePrecision.exact.rawValue,
+                    root.id, nowMS, nowMS,
+                ]
+            )
+        }
+
+        let snapshot = try repository.homeMonthSnapshot(
+            bookID: nil,
+            monthStart: monthStart,
+            nextMonthStart: nextMonthStart
+        )
+        XCTAssertEqual(
+            Set(snapshot.transactions.map(\.id)),
+            Set([root.id, lastInside.id, excluded.id])
+        )
+        XCTAssertFalse(snapshot.transactions.contains { $0.id == nextMonthRecord.id })
+        XCTAssertFalse(snapshot.transactions.contains { $0.id == separateRecord.id })
+        XCTAssertEqual(snapshot.summary.expense.storageString, "75")
+        XCTAssertEqual(snapshot.summary.income.storageString, "50")
+        XCTAssertEqual(snapshot.summary.transactionCount, 2)
+        XCTAssertEqual(snapshot.netAmounts[root.id]?.storageString, "75")
+        XCTAssertTrue(try repository.hasAnyVisibleTransaction())
+
+        let selectedSnapshot = try repository.homeMonthSnapshot(
+            bookID: separateBook.id,
+            monthStart: monthStart,
+            nextMonthStart: nextMonthStart
+        )
+        XCTAssertEqual(selectedSnapshot.transactions.map(\.id), [separateRecord.id])
+        XCTAssertEqual(selectedSnapshot.summary.expense.storageString, "400")
+
+        let fullHistory = try repository.transactions(filter: TransactionFilter(bookID: bookID))
+        XCTAssertTrue(fullHistory.contains { $0.id == nextMonthRecord.id })
+        XCTAssertThrowsError(
+            try repository.homeMonthSnapshot(
+                bookID: nil,
+                monthStart: nextMonthStart,
+                nextMonthStart: monthStart
+            )
+        ) { error in
+            XCTAssertEqual(error as? LedgerRepositoryError, .invalidDateRange)
+        }
     }
 
     func testForeignKeysRemainEnabledForEveryConnection() throws {

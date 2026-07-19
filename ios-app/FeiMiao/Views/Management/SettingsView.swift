@@ -5,12 +5,28 @@ import FeiMiaoDomain
 struct SettingsView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showingBackupPicker = false
-    @State private var pendingImportURL: URL?
-    @State private var importSummary: String?
+    @State private var pendingImportURL: URL? = nil
+    @State private var importSummary: String? = nil
 
+    private let embedsNavigationStack: Bool
+
+    init(embedsNavigationStack: Bool = true) {
+        self.embedsNavigationStack = embedsNavigationStack
+    }
+
+    @ViewBuilder
     var body: some View {
-        NavigationStack {
-            List {
+        if embedsNavigationStack {
+            NavigationStack {
+                content
+            }
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
+        List {
                 Section("账务资料") {
                     NavigationLink {
                         BooksManagementView()
@@ -143,7 +159,6 @@ struct SettingsView: View {
                 Text(importSummary ?? "")
             }
         }
-    }
 
     private var categorySummary: String {
         let active = store.categories.filter { !$0.isDeleted }

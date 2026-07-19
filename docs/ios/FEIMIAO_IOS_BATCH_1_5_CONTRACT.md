@@ -1,11 +1,13 @@
 # 肥喵记账 iOS：批次 1–5 交付合同
 
 > 基线：Android `1.197.0+199` / SQLite v40；iOS 从最终业务语义起步，不复刻历史错误。
+>
+> **2026-07-19 变更：本合同的 UI 方向已被用户否决并由 [`FEIMIAO_IOS_PARITY_CONTRACT.md`](FEIMIAO_IOS_PARITY_CONTRACT.md) 覆盖。数据精度、备份兼容和测试要求继续有效；`TabView`、系统模板化首页和“无需复制 Android 布局”不再有效。**
 
 ## 不可变原则
 
 - 同一份账务数据在 Android 与 iOS 上必须得到相同的净额、归属日和账户变化。
-- 原生 iOS 交互优先：`TabView`、`NavigationStack`、`List`、`Form`、`sheet`、`DatePicker`、`Menu`、`PhotosPicker`、SF Symbols。
+- Android 当前肥喵的可见产品体验优先；iOS 原生能力仅在不改变页面身份与工作流时使用。
 - 品牌部分保留肥喵猫咪、蓝灰主色、铜金收入、橙色风险、预算健康绿和账本封面。
 - 金额使用十进制定点字符串存储，禁止用二进制浮点数写库。
 - 所有同步候选实体保留 UUID 与更新时间；删除语义不得依赖物理行消失。
