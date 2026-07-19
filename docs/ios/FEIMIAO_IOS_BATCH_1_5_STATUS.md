@@ -1,6 +1,6 @@
 # 肥喵记账 iOS：批次 1–5 状态
 
-更新时间：2026-07-18
+更新时间：2026-07-19
 
 ## 工作位置
 
@@ -60,7 +60,7 @@
 
 ## 自动化覆盖
 
-- 当前共 28 个 XCTest 用例（等待 macOS CI 实际执行）。
+- 当前共 28 个 XCTest 用例，已在 macOS CI 全部通过。
 - Domain：金额精确运算、非法金额、时间精度存储键、120 个 Android 分类定义完全一致。
 - Data：CRUD 重启持久化、总账本聚合、搜索、转账账户守恒、软删除、账户删除/归档保护、旧时间精度、共享附件引用、两级分类约束、设置读写。
 - Import：Android v40 原始 DB、完整 ZIP、流式校验 asset media、收据恢复、哈希失败不改库、未来版本拒绝、畸形库不清空、安全备份可重开。
@@ -74,13 +74,17 @@
 - Swift/Android 分类：120/120，键、名称、英文、emoji、类型、父级完全一致。
 - `git diff --check`：通过（仅 Windows 的 LF→CRLF 提示）。
 
-## 尚未取得的门禁证据
+## macOS CI 交付证据
 
-Windows 没有 Swift/Xcode/iOS SDK，因此本机不能执行 `swift test`、XcodeGen 或 Simulator build。必须在用户允许 commit/push 后由 macOS CI 完成：
+- GitHub Actions：`iOS CI #19`，run `29675262611`，提交 `1dc3124`。
+- `FeiMiaoKit tests`：成功，28 个 XCTest 全部通过。
+- `Simulator build and launch`：成功；完成 XcodeGen、Simulator 构建、安装、首次启动后 5 秒存活、主页截图、终止、第二次启动后 2 秒存活。
+- `Unsigned device IPA`：成功；Release 设备构建和 IPA 完整性检查通过。
+- `FeiMiao-Appetize`：7.71 MB，SHA-256 `fee4d29b5e995ef98749dc98248082a66a58daeacd09e770477809fe6c6f98bd`。
+- `FeiMiao-unsigned-ipa`：3.36 MB，SHA-256 `5e0fec5203490019e5f254e0fa9319f680272184f92ecd978a86929a6489a872`。
+- `FeiMiao-simulator-diagnostics`：177 KB，SHA-256 `2bafc2e505e3a1515d18fd852a73c126a385dcb279835166cddfbc174f510322`。
+- `FeiMiao-device-build-diagnostics`：25.5 KB，SHA-256 `a629e3ce419c29a7d8ef5439b6b7fac0749cc20ab8421174a4c1b4bc6c3fd8be`。
 
-1. `swift test --package-path ios-app/FeiMiaoKit --parallel`
-2. XcodeGen + `xcodebuild` Simulator/设备构建
-3. Simulator 两次冷启动、进程存活检查和诊断日志
-4. Appetize 手工冒烟：切账本、搜索、新增、编辑、重启仍存在
+## 剩余人工门禁
 
-在以上门禁变绿前，不把批次 1–5 标成正式交付，也不进入批次 6。
+Appetize 手工冒烟尚未执行：切账本、搜索、新增、编辑、重启后仍存在。因此批次 1–5 的代码与自动化门禁已经完成，正式封板只差这一次人工交互验收；完成前不进入批次 6。
