@@ -1,0 +1,296 @@
+- generic [ref=f3e3]:
+  - navigation [ref=f3e6]:
+    - generic [ref=f3e7]:
+      - generic [ref=f3e8]:
+        - img "App Store" [ref=f3e9]
+        - button "App Store" [ref=f3e12] [cursor=pointer]:
+          - generic [ref=f3e13]: iPhone 专区
+      - generic [ref=f3e18]:
+        - generic: 搜索
+        - searchbox "搜索" [ref=f3e19]
+    - generic [ref=f3e21]:
+      - list [ref=f3e23]:
+        - listitem [ref=f3e24]:
+          - button "Today" [ref=f3e25] [cursor=pointer]
+        - listitem [ref=f3e29]:
+          - button "游戏" [ref=f3e30] [cursor=pointer]
+        - listitem [ref=f3e34]:
+          - button "App" [ref=f3e35] [cursor=pointer]
+      - generic [ref=f3e39]:
+        - generic [ref=f3e40]: 类别
+        - list "类别" [ref=f3e42]:
+          - listitem [ref=f3e43]:
+            - button "类别" [ref=f3e44] [cursor=pointer]
+          - listitem [ref=f3e49]:
+            - button "摄影与录像" [ref=f3e50] [cursor=pointer]
+          - listitem [ref=f3e55]:
+            - button "健康健美" [ref=f3e56] [cursor=pointer]
+          - listitem [ref=f3e61]:
+            - button "效率" [ref=f3e62] [cursor=pointer]
+          - listitem [ref=f3e67]:
+            - button "娱乐" [ref=f3e68] [cursor=pointer]
+          - listitem [ref=f3e73]:
+            - button "动作" [ref=f3e74] [cursor=pointer]
+          - listitem [ref=f3e79]:
+            - button "冒险" [ref=f3e80] [cursor=pointer]
+          - listitem [ref=f3e85]:
+            - button "益智解谜" [ref=f3e86] [cursor=pointer]
+          - listitem [ref=f3e91]:
+            - button "独立" [ref=f3e92] [cursor=pointer]
+      - generic:
+        - list
+  - generic [ref=f3e97]:
+    - main [ref=f3e98]:
+      - generic [ref=f3e99]:
+        - heading [level=1] [ref=f3e100]:
+          - link "知我记物 - 更懂你的记物软件" [ref=f3e101] [cursor=pointer]:
+            - /url: https://apps.apple.com/cn/app/%E7%9F%A5%E6%88%91%E8%AE%B0%E7%89%A9-%E6%9B%B4%E6%87%82%E4%BD%A0%E7%9A%84%E8%AE%B0%E7%89%A9%E8%BD%AF%E4%BB%B6/id6740251522
+        - region "评分及评论" [ref=f3e102]:
+          - heading "评分及评论" [level=2] [ref=f3e105]
+          - list [ref=f3e106]:
+            - listitem [ref=f3e107]:
+              - generic [ref=f3e109]:
+                - generic [ref=f3e110]:
+                  - generic [ref=f3e111]: "4.5"
+                  - generic [ref=f3e112]: 满分 5 分
+                - generic [ref=f3e113]:
+                  - generic [ref=f3e114]: 50 个评分
+                  - generic [ref=f3e115]:
+                    - generic "**ASE.Shared.Ratings.Review.StarsAria.one.other**" [ref=f3e116]
+                    - generic "**ASE.Shared.Ratings.Review.StarsAria.one.other**" [ref=f3e125]
+                    - generic "**ASE.Shared.Ratings.Review.StarsAria.one.other**" [ref=f3e133]
+                    - generic "**ASE.Shared.Ratings.Review.StarsAria.one.other**" [ref=f3e140]
+                    - generic "**ASE.Shared.Ratings.Review.StarsAria.other.other**" [ref=f3e145]
+        - list [ref=f3e151]:
+          - listitem [ref=f3e152]:
+            - generic [ref=f3e153]:
+              - generic [ref=f3e154]:
+                - generic [ref=f3e155]:
+                  - heading "越来越喜欢～第二次建议！" [level=3] [ref=f3e158]
+                  - list "5 星" [ref=f3e160]:
+                    - listitem [ref=f3e161]
+                    - listitem [ref=f3e162]
+                    - listitem [ref=f3e163]
+                    - listitem [ref=f3e164]
+                    - listitem [ref=f3e165]
+                - generic [ref=f3e166]:
+                  - time [ref=f3e167]: 3月21日
+                  - generic [ref=f3e168]: 10h28s
+              - generic [ref=f3e170]:
+                - generic [ref=f3e171]:
+                  - paragraph [ref=f3e172]: 开通pro之后使用感很好，流畅👍🏻之前提的建议也有很好地被吸纳，希望这次提出的建议依然有采用参考的价值～非常希望推出【陪伴时长可选是否在主页展示】和【选择是否需要记录该物品陪伴时长】的功能！！！对于周边收藏品记录而言，「陪伴时长」其实是个虚构叙事，因为有预售时效，而且对于拖延症患者习惯攒一堆再来记录来说是很难记住每一件物品的【入手时间】的，希望能改掉默认记录入手时间这一块，让入手时间和陪伴时长变成【可选性记录】并非默认～第二个建议是个细节性建议，同样由于是收藏品记录，每次产生【复数物品】的入手价格可能是不一样的，希望能够推出物品库存【分开记价】，同时也不耽误该件物品记录在库的总价。综上，开发者辛苦了，感谢阅读～
+                  - button "更多" [ref=f3e173] [cursor=pointer]
+                - generic [ref=f3e174]:
+                  - text: 开发者回复
+                  - generic [ref=f3e175]:
+                    - paragraph [ref=f3e176]: 感谢你的喜爱与反馈！1️⃣ 下版本会做优化2️⃣ 回顾部分，正是知我记物中「知我」的主要部分，后续的版本中这块会做迭代，可以期待一下
+                    - button "更多" [ref=f3e177] [cursor=pointer]
+          - listitem [ref=f3e178]:
+            - generic [ref=f3e179]:
+              - generic [ref=f3e180]:
+                - generic [ref=f3e181]:
+                  - heading "健忘仓鼠党福音！" [level=3] [ref=f3e184]
+                  - list "5 星" [ref=f3e186]:
+                    - listitem [ref=f3e187]
+                    - listitem [ref=f3e188]
+                    - listitem [ref=f3e189]
+                    - listitem [ref=f3e190]
+                    - listitem [ref=f3e191]
+                - generic [ref=f3e192]:
+                  - time [ref=f3e193]: 2025/01/22
+                  - generic [ref=f3e194]: hhgnbz
+              - generic [ref=f3e196]:
+                - generic [ref=f3e197]:
+                  - paragraph [ref=f3e198]: 之前用过几款记物的app，总是觉得差强人意，要么就是交互有点不符合预期，要么就是ui丑。前几天发现这款app就试用了下，发现各方面都非常优秀，迭代速度也非常快，需要的功能提出需求基本上都能得到开发大大的及时响应，好评！！
+                  - button "更多" [ref=f3e199] [cursor=pointer]
+                - generic [ref=f3e200]:
+                  - text: 开发者回复
+                  - generic [ref=f3e201]:
+                    - paragraph [ref=f3e202]: 非常感谢您的耐心评论与认可！有意见、建议或其他使用问题欢迎第一时间与我们反馈～
+                    - button "更多" [ref=f3e203] [cursor=pointer]
+          - listitem [ref=f3e204]:
+            - generic [ref=f3e205]:
+              - generic [ref=f3e206]:
+                - generic [ref=f3e207]:
+                  - heading "简洁实用的app" [level=3] [ref=f3e210]
+                  - list "4 星" [ref=f3e212]:
+                    - listitem [ref=f3e213]
+                    - listitem [ref=f3e214]
+                    - listitem [ref=f3e215]
+                    - listitem [ref=f3e216]
+                    - listitem [ref=f3e217]
+                - generic [ref=f3e218]:
+                  - time [ref=f3e219]: 2025/10/05
+                  - generic [ref=f3e220]: Emma66888
+              - generic [ref=f3e222]:
+                - generic [ref=f3e223]:
+                  - paragraph [ref=f3e224]: 朋友推荐的，很喜欢。界面简洁、功能实用。希望可以添加修改渠道的功能，改善一下录入物品多了就经常闪退的问题。感谢。（更新）最新版本更新完还是无法进入app ，点进去会出现黑屏，随即闪退回桌面。我每天都希望它能正常使用TT，可是总是失望……目前我是记录了360件物品左右，希望可以早日恢复正常使用🤲
+                  - button "更多" [ref=f3e225] [cursor=pointer]
+                - generic [ref=f3e226]:
+                  - text: 开发者回复
+                  - generic [ref=f3e227]:
+                    - paragraph [ref=f3e228]: 感谢反馈，方便的话可以在应用内的故障反馈中提供更多信息吗？（如具体现象录屏）如果有崩溃上报的话也麻烦点一下。这个点我会尝试去优化。
+                    - button "更多" [ref=f3e229] [cursor=pointer]
+          - listitem [ref=f3e230]:
+            - generic [ref=f3e231]:
+              - generic [ref=f3e232]:
+                - generic [ref=f3e233]:
+                  - heading "适合记录不适合管理" [level=3] [ref=f3e236]
+                  - list "3 星" [ref=f3e238]:
+                    - listitem [ref=f3e239]
+                    - listitem [ref=f3e240]
+                    - listitem [ref=f3e241]
+                    - listitem [ref=f3e242]
+                    - listitem [ref=f3e243]
+                - generic [ref=f3e244]:
+                  - time [ref=f3e245]: 2025/06/02
+                  - generic [ref=f3e246]: shoojun
+              - generic [ref=f3e248]:
+                - generic [ref=f3e249]:
+                  - paragraph [ref=f3e250]: 界面简洁清爽，定位偏向收藏展示或做生活记录，不适合管理。物品种类和数量变多时就不容易分类浏览，因为分类和标签是两个平级无法嵌套筛选。从应用商店添加的功能没什么作用，回顾功能也只带来一丝丝新鲜感。另外选择日期时年月和日必须分开选有点奇怪。
+                  - button "更多" [ref=f3e251] [cursor=pointer]
+                - generic [ref=f3e252]:
+                  - text: 开发者回复
+                  - generic [ref=f3e253]:
+                    - paragraph [ref=f3e254]: 感谢您的反馈！正如您所说，我们的定位确实是展示和生活记录偏多，同时保留一定的管理能力，产品定位是如此。从应用商店添加主要是解决部分用户需要自己找应用图标的问题，这是多维导入方式的尝试之一，后续会持续上新其他通过购物平台链接或者扫一维码等导入方式。回顾功能是我们最想挖掘的功能，奈何早期主要大力点在功能上，所以这块暂时还没有做太多事情，后续会在这上面做文章。另外，年月日这个组件是用的 apple 原生自带的，并没有做什么过度设计，我们会参考您的建议看看别的组件。
+                    - button "更多" [ref=f3e255] [cursor=pointer]
+          - listitem [ref=f3e256]:
+            - generic [ref=f3e257]:
+              - generic [ref=f3e258]:
+                - generic [ref=f3e259]:
+                  - heading "可选择显示陪伴天数/次数" [level=3] [ref=f3e262]
+                  - list "5 星" [ref=f3e264]:
+                    - listitem [ref=f3e265]
+                    - listitem [ref=f3e266]
+                    - listitem [ref=f3e267]
+                    - listitem [ref=f3e268]
+                    - listitem [ref=f3e269]
+                - generic [ref=f3e270]:
+                  - time [ref=f3e271]: 2025/09/20
+                  - generic [ref=f3e272]: 李华的外国朋友
+              - generic [ref=f3e274]:
+                - paragraph [ref=f3e276]: 一个物品的方框中，是否可以选择右侧大的是显示陪伴天数/使用次数，并据此在左下角显示日均/次均。同时主页可直接快捷点击+1，因为一天有很多东西需要+1次，不想一个个点进去。感谢🙏🏻
+                - generic [ref=f3e277]:
+                  - text: 开发者回复
+                  - paragraph [ref=f3e279]: 感谢反馈，我们会考虑的～
+          - listitem [ref=f3e280]:
+            - generic [ref=f3e281]:
+              - generic [ref=f3e282]:
+                - generic [ref=f3e283]:
+                  - heading "不错，一切清晰明了" [level=3] [ref=f3e286]
+                  - list "5 星" [ref=f3e288]:
+                    - listitem [ref=f3e289]
+                    - listitem [ref=f3e290]
+                    - listitem [ref=f3e291]
+                    - listitem [ref=f3e292]
+                    - listitem [ref=f3e293]
+                - generic [ref=f3e294]:
+                  - time [ref=f3e295]: 2025/01/21
+                  - generic [ref=f3e296]: 奇异鹅
+              - generic [ref=f3e298]:
+                - paragraph [ref=f3e300]: 添加物品之后就能防止我继续乱买东西，因为平均每日价格能够提醒我，这东西还没回本。app页面简洁美观，强迫症患者爱了。继续加油。
+                - generic [ref=f3e301]:
+                  - text: 开发者回复
+                  - generic [ref=f3e302]:
+                    - paragraph [ref=f3e303]: 非常感谢您的认可！有意见、建议或其他使用问题欢迎第一时间与我们反馈～
+                    - button "更多" [ref=f3e304] [cursor=pointer]
+          - listitem [ref=f3e305]:
+            - generic [ref=f3e306]:
+              - generic [ref=f3e307]:
+                - generic [ref=f3e308]:
+                  - heading "列表视图的外观" [level=3] [ref=f3e311]
+                  - list "4 星" [ref=f3e313]:
+                    - listitem [ref=f3e314]
+                    - listitem [ref=f3e315]
+                    - listitem [ref=f3e316]
+                    - listitem [ref=f3e317]
+                    - listitem [ref=f3e318]
+                - generic [ref=f3e319]:
+                  - time [ref=f3e320]: 4月7日
+                  - generic [ref=f3e321]: 已经好晚好晚了啊
+              - generic [ref=f3e323]:
+                - paragraph [ref=f3e325]: 还是更喜欢以前列表视图的样子，宽宽的，信息没有那么密集，点进app看着比较舒服。现在点进去信息太多了看着有些累有些杂，能不能给一个选择信息密集或松散显示的选择键呢。
+                - generic [ref=f3e326]:
+                  - text: 开发者回复
+                  - paragraph [ref=f3e328]: 感谢您的反馈，目前这块已经在考虑开放了
+          - listitem [ref=f3e329]:
+            - generic [ref=f3e330]:
+              - generic [ref=f3e331]:
+                - generic [ref=f3e332]:
+                  - heading "相当有意思的app" [level=3] [ref=f3e335]
+                  - list "4 星" [ref=f3e337]:
+                    - listitem [ref=f3e338]
+                    - listitem [ref=f3e339]
+                    - listitem [ref=f3e340]
+                    - listitem [ref=f3e341]
+                    - listitem [ref=f3e342]
+                - generic [ref=f3e343]:
+                  - time [ref=f3e344]: 2月5日
+                  - generic [ref=f3e345]: JingKai鍇
+              - generic [ref=f3e347]:
+                - paragraph [ref=f3e349]: 软件设计和ui很好，在储物箱和心愿清单的设计也很棒，就是希望能加入物品发票添加界面并再优化一下抠图逻辑和照片编辑就更好了
+                - generic [ref=f3e350]:
+                  - text: 开发者回复
+                  - generic [ref=f3e351]:
+                    - paragraph [ref=f3e352]: 感谢支持和反馈～发票可以添加在「附件」中；抠图目前用的是apple 原生的能力，可能比较难优化了；照片编辑我们再努力努力💪
+                    - button "更多" [ref=f3e353] [cursor=pointer]
+          - listitem [ref=f3e354]:
+            - generic [ref=f3e355]:
+              - generic [ref=f3e356]:
+                - generic [ref=f3e357]:
+                  - heading "很好用👍" [level=3] [ref=f3e360]
+                  - list "5 星" [ref=f3e362]:
+                    - listitem [ref=f3e363]
+                    - listitem [ref=f3e364]
+                    - listitem [ref=f3e365]
+                    - listitem [ref=f3e366]
+                    - listitem [ref=f3e367]
+                - generic [ref=f3e368]:
+                  - time [ref=f3e369]: 2025/06/15
+                  - generic [ref=f3e370]: 张帆航
+              - generic [ref=f3e372]:
+                - paragraph [ref=f3e374]: 试用了几款物品 app，这款是我觉得 ui 和产品逻辑最好的，但有一个小问题有没有考虑适配 mac 或 pad 端
+                - generic [ref=f3e375]:
+                  - text: 开发者回复
+                  - paragraph [ref=f3e377]: pad端后期会考虑，mac端不考虑哈
+          - listitem [ref=f3e378]:
+            - generic [ref=f3e379]:
+              - generic [ref=f3e380]:
+                - generic [ref=f3e381]:
+                  - heading "开发者一定是个很用心的人" [level=3] [ref=f3e384]
+                  - list "5 星" [ref=f3e386]:
+                    - listitem [ref=f3e387]
+                    - listitem [ref=f3e388]
+                    - listitem [ref=f3e389]
+                    - listitem [ref=f3e390]
+                    - listitem [ref=f3e391]
+                - generic [ref=f3e392]:
+                  - time [ref=f3e393]: 2025/01/25
+                  - generic [ref=f3e394]: YTTerry
+              - generic [ref=f3e396]:
+                - paragraph [ref=f3e398]: 一周一版App更新的开发者还是第一次见，xhs里用户反馈的各种问题都一条条认真回复🥹
+                - generic [ref=f3e399]:
+                  - text: 开发者回复
+                  - generic [ref=f3e400]:
+                    - paragraph [ref=f3e401]: 非常感谢您的认可！有意见、建议或其他使用问题欢迎第一时间与我们反馈～
+                    - button "更多" [ref=f3e402] [cursor=pointer]
+    - generic [ref=f3e405]:
+      - paragraph [ref=f3e406]:
+        - generic [ref=f3e407]:
+          - text: Copyright © 2026
+          - link "Apple Inc." [ref=f3e408] [cursor=pointer]:
+            - /url: https://www.apple.com.cn
+        - text: 保留所有权利。
+      - list [ref=f3e409]:
+        - listitem [ref=f3e410]:
+          - link "互联网服务条款" [ref=f3e411] [cursor=pointer]:
+            - /url: https://www.apple.com.cn/legal/internet-services/
+        - listitem [ref=f3e412]:
+          - link "App Store 与隐私" [ref=f3e413] [cursor=pointer]:
+            - /url: https://www.apple.com/legal/privacy/data/zh-cn/app-store/
+        - listitem [ref=f3e414]:
+          - link "Cookie 警告" [ref=f3e415] [cursor=pointer]:
+            - /url: https://www.apple.com/legal/privacy/szh/cookies/
+        - listitem [ref=f3e416]:
+          - link "支持" [ref=f3e417] [cursor=pointer]:
+            - /url: https://support.apple.com/zh-cn/billing
