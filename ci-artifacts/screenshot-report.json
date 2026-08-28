@@ -1,0 +1,288 @@
+{
+  "schemaVersion": 1,
+  "pairCount": 35,
+  "comparedCount": 0,
+  "incompleteCount": 35,
+  "reports": [
+    {
+      "id": "home-overview",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/01-home.png",
+      "feature": "首页月度总览",
+      "route": "home",
+      "notes": "金额、账本筛选和最近账目要一致；导航和材质允许原生差异。"
+    },
+    {
+      "id": "quick-add",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/02-quickadd.png",
+      "feature": "手动记账",
+      "route": "quickadd",
+      "notes": "支出/收入/转账需另做交互回归；此对为默认支出首屏。"
+    },
+    {
+      "id": "transactions",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/03-transactions.png",
+      "feature": "交易明细与搜索",
+      "route": "transactions",
+      "notes": "退款子行不重复显示，列表净额和按天合计一致。"
+    },
+    {
+      "id": "stats-week",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/04-stats-week.png",
+      "feature": "周统计",
+      "route": "stats/week",
+      "notes": "按周一至周日、含空白天。"
+    },
+    {
+      "id": "stats-month",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/05-stats-month.png",
+      "feature": "月统计",
+      "route": "stats/month",
+      "notes": "月度总额、分类构成和每日趋势一致。"
+    },
+    {
+      "id": "stats-year",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/06-stats-year.png",
+      "feature": "年统计",
+      "route": "stats/year",
+      "notes": "全年总额、每月趋势和分类排行一致。"
+    },
+    {
+      "id": "stats-custom",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/07-stats-custom.png",
+      "feature": "自定义统计区间",
+      "route": "stats/custom",
+      "notes": "起止日包含整天，并记住上次区间。"
+    },
+    {
+      "id": "budget",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/08-budget.png",
+      "feature": "预算与今日可花",
+      "route": "settings/budget",
+      "notes": "总预算、周期窗口、今日可花、分类预算、固定承诺模板和当前/下一周期 occurrence；匹配/跳过/退款复核由操作回归补充。"
+    },
+    {
+      "id": "reconcile",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/09-reconcile.png",
+      "feature": "账户对账",
+      "route": "settings/reconcile",
+      "notes": "余额校准和质量状态需一致。"
+    },
+    {
+      "id": "reimburse",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/10-reimburse.png",
+      "feature": "待报销",
+      "route": "settings/reimburse",
+      "notes": "报销到账创建附着冲减，原账单净额归零。"
+    },
+    {
+      "id": "savings",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/11-savings.png",
+      "feature": "存钱目标",
+      "route": "settings/savings",
+      "notes": "目标进度和归档状态一致。"
+    },
+    {
+      "id": "recurring",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/12-recurring.png",
+      "feature": "定时记账",
+      "route": "settings/recurring",
+      "notes": "规则展示一致；后台调度能力按平台差异单独验收。"
+    },
+    {
+      "id": "assets",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/13-assets.png",
+      "feature": "资产管理",
+      "route": "settings/assets",
+      "notes": "资产档案和生命周期入口一致。"
+    },
+    {
+      "id": "liabilities",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/14-liabilities.png",
+      "feature": "负债管理",
+      "route": "settings/liabilities",
+      "notes": "负债档案、还款入口和余额口径一致。"
+    },
+    {
+      "id": "net-worth",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/15-net-worth.png",
+      "feature": "净资产",
+      "route": "settings/net-worth",
+      "notes": "资产、应收、负债和质量状态一致。"
+    },
+    {
+      "id": "books",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/16-books.png",
+      "feature": "账本管理",
+      "route": "settings/books",
+      "notes": "总账本不可删除；封面是原生符号占位，正式封面资产待补。"
+    },
+    {
+      "id": "accounts",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/17-accounts.png",
+      "feature": "账户管理",
+      "route": "settings/accounts",
+      "notes": "账户类型、余额入口和对账入口一致；iOS 使用原生列表与 sheet。"
+    },
+    {
+      "id": "categories",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/18-categories.png",
+      "feature": "分类管理",
+      "route": "settings/categories",
+      "notes": "稳定分类 key、层级、自定义和隐藏入口一致。"
+    },
+    {
+      "id": "tags",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/19-tags.png",
+      "feature": "标签管理",
+      "route": "settings/tags",
+      "notes": "标签列表、排序和新建入口一致。"
+    },
+    {
+      "id": "settings",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/20-settings.png",
+      "feature": "设置与数据管理",
+      "route": "settings",
+      "notes": "入口覆盖一致；iOS CSV 复核、canonical ZIP 和 Android v1/v2 原始 SQLite ZIP 转换已接入，待真实备份验收。"
+    },
+    {
+      "id": "ai",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/21-ai.png",
+      "feature": "AI 记账入口",
+      "route": "ai",
+      "notes": "Android 与 iOS 均进入 Chats 列表；点记一记后进入正文。"
+    },
+    {
+      "id": "ai-settings",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/22-ai-settings.png",
+      "feature": "AI 服务商与模型设置",
+      "route": "settings/ai",
+      "notes": "服务商账号、模型、端点、Effort 和 Keychain/API Key 状态；OAuth 按平台能力单独标注。"
+    },
+    {
+      "id": "import-review",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/23-import-review.png",
+      "feature": "账单导入复核与商户批量分类",
+      "route": "settings/import-review",
+      "notes": "商品优先分类、商户分组、账户选择和退款订单匹配入口；原生控件允许视觉差异。"
+    },
+    {
+      "id": "reports",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/24-reports.png",
+      "feature": "报告库与月报阅读",
+      "route": "settings/reports",
+      "notes": "报告正文和统计口径一致；Android 使用玻璃半屏报告库，iOS 使用原生 NavigationStack。"
+    },
+    {
+      "id": "memory",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/25-memory.png",
+      "feature": "喵学到的分类",
+      "route": "settings/memory",
+      "notes": "分类学习映射的展示与删除；历史账单不受影响。"
+    },
+    {
+      "id": "ai-tasks",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/26-ai-tasks.png",
+      "feature": "AI 任务中心",
+      "route": "settings/ai-tasks",
+      "notes": "阶段、状态和配置摘要一致；不展示密钥、完整提示词或原始思考。"
+    },
+    {
+      "id": "ai-diagnostics",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/27-ai-diagnostics.png",
+      "feature": "AI 诊断",
+      "route": "settings/ai-diagnostics",
+      "notes": "服务商运行次数、失败状态和脱敏错误摘要。"
+    },
+    {
+      "id": "ai-search",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/28-ai-search.png",
+      "feature": "AI 统一搜索",
+      "route": "settings/ai-search",
+      "notes": "账单、对话和 AI 任务的只读统一搜索。"
+    },
+    {
+      "id": "ai-memory",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/29-ai-memory.png",
+      "feature": "AI 可控记忆",
+      "route": "settings/ai-memory",
+      "notes": "仅明确授权记忆进入上下文；删除不改历史。"
+    },
+    {
+      "id": "ai-extensions",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/30-ai-extensions.png",
+      "feature": "AI 技能与连接",
+      "route": "settings/ai-extensions",
+      "notes": "白名单技能和连接器开关；联网搜索按开关生效。"
+    },
+    {
+      "id": "ai-schedules",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/31-ai-schedules.png",
+      "feature": "AI 定时报表",
+      "route": "settings/ai-schedules",
+      "notes": "计划数据一致；iOS 后台生成改为系统提醒后打开 App。"
+    },
+    {
+      "id": "ai-local",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/32-ai-local.png",
+      "feature": "本地模型伴侣",
+      "route": "settings/ai-local",
+      "notes": "本机回环地址和健康检查；不允许远程明文 HTTP。"
+    },
+    {
+      "id": "backup",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/33-backup.png",
+      "feature": "备份与恢复",
+      "route": "settings/backup",
+      "notes": "完整备份、附件和最近恢复点；恢复语义单独检查。"
+    },
+    {
+      "id": "theme",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/34-theme.png",
+      "feature": "主题外观",
+      "route": "settings/theme",
+      "notes": "外观选择和系统 Liquid Glass；语义色保持一致。"
+    },
+    {
+      "id": "display",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/35-display.png",
+      "feature": "账单与聊天显示",
+      "route": "settings/display",
+      "notes": "内容优先/分类优先和用户气泡背景策略。"
+    }
+  ]
+}
