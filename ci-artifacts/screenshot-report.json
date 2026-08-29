@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "pairCount": 37,
+  "pairCount": 38,
   "comparedCount": 0,
-  "incompleteCount": 37,
+  "incompleteCount": 38,
   "reports": [
     {
       "id": "home-overview",
@@ -299,6 +299,14 @@
       "feature": "物品资产详情操作态",
       "route": "settings/assets/detail",
       "notes": "同一演示物品的估值、持有指标、账单关联和出售/退货入口；操作按钮允许原生布局差异。"
+    },
+    {
+      "id": "account-detail",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/39-account-detail.png",
+      "feature": "账户详情操作态",
+      "route": "settings/accounts/detail",
+      "notes": "同一现金账户的余额、趋势、校准入口和流水活动；iOS 使用原生 sheet 展示详情。"
     }
   ]
 }
