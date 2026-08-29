@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "pairCount": 38,
+  "pairCount": 39,
   "comparedCount": 0,
-  "incompleteCount": 38,
+  "incompleteCount": 39,
   "reports": [
     {
       "id": "home-overview",
@@ -307,6 +307,14 @@
       "feature": "账户详情操作态",
       "route": "settings/accounts/detail",
       "notes": "同一现金账户的余额、趋势、校准入口和流水活动；iOS 使用原生 sheet 展示详情。"
+    },
+    {
+      "id": "reimburse-settlement",
+      "status": "missing_android",
+      "ios": "ci-artifacts/ios-screenshots/40-reimburse-settlement.png",
+      "feature": "报销到账操作态",
+      "route": "settings/reimburse/settlement",
+      "notes": "同一待报销账单的到账账户、到账日期和抵消金额确认界面；确认按钮保留平台原生交互。"
     }
   ]
 }
