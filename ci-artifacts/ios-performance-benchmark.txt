@@ -1,1 +1,1 @@
-IOS_PERF_COMPARISON dataset=10000 iterations=5 naive_ms=1533.79 cached_ms=1810.53 speedup=0.85x
+IOS_PERF_COMPARISON dataset=10000 iterations=5 naive_ms=1807.93 cached_ms=1842.62 speedup=0.98x
