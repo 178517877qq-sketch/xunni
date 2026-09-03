@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 2,
+  "captureStatus": "captured",
+  "imagePath": "screenshots/16-stats-custom.png",
+  "sidecarPath": "screenshots/16-stats-custom.metadata.json",
+  "imageSha256": "D7FACB645B06669F8A3AB588A34AE8AE5B926D7B12EBB41197BF859E9EBB364C",
+  "width": 1260,
+  "height": 2736,
+  "platform": "ios",
+  "device": "iPhone Air",
+  "os": "iOS Simulator (iPhone Air)",
+  "sourceRevision": "24439cc08753b45fa557acf5a0aa505d4a994344",
+  "sourceBranch": "codex/ios-same-app",
+  "fixture": {
+    "fixtureId": "p0-demo-ledger-2026-08-v1",
+    "inputHash": "E45AB0CEFF322CCAE8A54474AB523F954724A749D0561F698ED81F23850996A6",
+    "logicalNow": "2026-08-27T12:00:00+08:00",
+    "locale": "zh-Hans",
+    "timezone": "Asia/Shanghai",
+    "currency": "CNY",
+    "book": "总账本",
+    "expected": {
+      "monthlyIncome": "620.00",
+      "monthlyExpense": "1017.90",
+      "monthlyBalance": "-397.90",
+      "budget": "3000.00"
+    }
+  },
+  "sourceVersions": {
+    "androidVersion": "1.289.0+304",
+    "androidWatermark": "b0901-304",
+    "androidDatabaseVersion": 49,
+    "iosVersion": "1.286.0+300"
+  },
+  "legacySlot": {
+    "legacyId": "stats-custom",
+    "canonicalRouteIds": [
+      "stats-custom"
+    ],
+    "sourcePath": "ci-artifacts/ios-screenshots/16-stats-custom.png"
+  },
+  "routeId": "stats-custom",
+  "canonicalRouteIds": [
+    "stats-custom"
+  ],
+  "generatedAt": "2026-09-03T12:44:15.658195+00:00"
+}
