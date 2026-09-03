@@ -1,15 +1,15 @@
 {
   "schemaVersion": 2,
   "captureStatus": "captured",
-  "imagePath": "screenshots/38-ai-extensions.png",
-  "sidecarPath": "screenshots/38-ai-extensions.metadata.json",
-  "imageSha256": "C54EE860C2ED4F3EF1484C461BBE418D02EBFB4281FB3915AF4273BB49F8239F",
+  "imagePath": "ci-artifacts/ios-screenshots/38-ai-extensions.png",
+  "sidecarPath": "ci-artifacts/ios-screenshots/38-ai-extensions.metadata.json",
+  "imageSha256": "819A9BA82C6118F8FFA99D0A78A6742A0C23829E045ABF53F689340996321DDE",
   "width": 1260,
   "height": 2736,
   "platform": "ios",
   "device": "iPhone Air",
   "os": "iOS Simulator (iPhone Air)",
-  "sourceRevision": "24439cc08753b45fa557acf5a0aa505d4a994344",
+  "sourceRevision": "d45cb0b057de04d94dd5110c1cd58258f6c5d794",
   "sourceBranch": "codex/ios-same-app",
   "fixture": {
     "fixtureId": "p0-demo-ledger-2026-08-v1",
@@ -43,5 +43,5 @@
   "canonicalRouteIds": [
     "ai-extensions"
   ],
-  "generatedAt": "2026-09-03T12:44:15.658195+00:00"
+  "generatedAt": "2026-09-03T14:48:50.265355+00:00"
 }

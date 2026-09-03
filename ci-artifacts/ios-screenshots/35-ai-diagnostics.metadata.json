@@ -1,15 +1,15 @@
 {
   "schemaVersion": 2,
   "captureStatus": "captured",
-  "imagePath": "screenshots/35-ai-diagnostics.png",
-  "sidecarPath": "screenshots/35-ai-diagnostics.metadata.json",
-  "imageSha256": "2DDB0D28AEA4B29AE4A5DA87FBFB50891B90CC1CFA22E1EAEEF4501BC3F77C18",
+  "imagePath": "ci-artifacts/ios-screenshots/35-ai-diagnostics.png",
+  "sidecarPath": "ci-artifacts/ios-screenshots/35-ai-diagnostics.metadata.json",
+  "imageSha256": "ECB289D90B5063B24CA338F4F66F7346DB6033C8E5C73C178F55894F7ED01571",
   "width": 1260,
   "height": 2736,
   "platform": "ios",
   "device": "iPhone Air",
   "os": "iOS Simulator (iPhone Air)",
-  "sourceRevision": "24439cc08753b45fa557acf5a0aa505d4a994344",
+  "sourceRevision": "d45cb0b057de04d94dd5110c1cd58258f6c5d794",
   "sourceBranch": "codex/ios-same-app",
   "fixture": {
     "fixtureId": "p0-demo-ledger-2026-08-v1",
@@ -43,5 +43,5 @@
   "canonicalRouteIds": [
     "ai-diagnostics"
   ],
-  "generatedAt": "2026-09-03T12:44:15.658195+00:00"
+  "generatedAt": "2026-09-03T14:48:50.265355+00:00"
 }

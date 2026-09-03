@@ -1,15 +1,15 @@
 {
   "schemaVersion": 2,
   "captureStatus": "captured",
-  "imagePath": "screenshots/10-categories.png",
-  "sidecarPath": "screenshots/10-categories.metadata.json",
-  "imageSha256": "E2F4CDEADD74135C01F6ED634D9A171C044F474916BF2F253F34F1D7BE0155C8",
+  "imagePath": "ci-artifacts/ios-screenshots/10-categories.png",
+  "sidecarPath": "ci-artifacts/ios-screenshots/10-categories.metadata.json",
+  "imageSha256": "EFE37646D38DF52FF64FF426DD79708317AD7E6DB3A39214AEAB3DCD916A45C9",
   "width": 1260,
   "height": 2736,
   "platform": "ios",
   "device": "iPhone Air",
   "os": "iOS Simulator (iPhone Air)",
-  "sourceRevision": "24439cc08753b45fa557acf5a0aa505d4a994344",
+  "sourceRevision": "d45cb0b057de04d94dd5110c1cd58258f6c5d794",
   "sourceBranch": "codex/ios-same-app",
   "fixture": {
     "fixtureId": "p0-demo-ledger-2026-08-v1",
@@ -43,5 +43,5 @@
   "canonicalRouteIds": [
     "categories"
   ],
-  "generatedAt": "2026-09-03T12:44:15.658195+00:00"
+  "generatedAt": "2026-09-03T14:48:50.265355+00:00"
 }

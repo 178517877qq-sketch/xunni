@@ -1,15 +1,15 @@
 {
   "schemaVersion": 2,
   "captureStatus": "captured",
-  "imagePath": "screenshots/39-ai-schedules.png",
-  "sidecarPath": "screenshots/39-ai-schedules.metadata.json",
-  "imageSha256": "3DD44A3FFF4719FA3778ECDD488434B27CAD3EED95F767B12DB26996949E56C7",
+  "imagePath": "ci-artifacts/ios-screenshots/39-ai-schedules.png",
+  "sidecarPath": "ci-artifacts/ios-screenshots/39-ai-schedules.metadata.json",
+  "imageSha256": "174FE58D4FC29330711D300C6E8079D91990039A06A682042DA8209584706EFC",
   "width": 1260,
   "height": 2736,
   "platform": "ios",
   "device": "iPhone Air",
   "os": "iOS Simulator (iPhone Air)",
-  "sourceRevision": "24439cc08753b45fa557acf5a0aa505d4a994344",
+  "sourceRevision": "d45cb0b057de04d94dd5110c1cd58258f6c5d794",
   "sourceBranch": "codex/ios-same-app",
   "fixture": {
     "fixtureId": "p0-demo-ledger-2026-08-v1",
@@ -43,5 +43,5 @@
   "canonicalRouteIds": [
     "ai-schedules"
   ],
-  "generatedAt": "2026-09-03T12:44:15.658195+00:00"
+  "generatedAt": "2026-09-03T14:48:50.265355+00:00"
 }

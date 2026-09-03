@@ -1,15 +1,15 @@
 {
   "schemaVersion": 2,
   "captureStatus": "captured",
-  "imagePath": "screenshots/36-ai-search.png",
-  "sidecarPath": "screenshots/36-ai-search.metadata.json",
-  "imageSha256": "ED433C1A4B395EF37289B1D35E6ED75F06E365C4C4B2AC7C969F8046C5A95E7E",
+  "imagePath": "ci-artifacts/ios-screenshots/36-ai-search.png",
+  "sidecarPath": "ci-artifacts/ios-screenshots/36-ai-search.metadata.json",
+  "imageSha256": "DFC0AE8C5AD7875AFEF931226F089BFAF432F3680D31856770A7963EF2823729",
   "width": 1260,
   "height": 2736,
   "platform": "ios",
   "device": "iPhone Air",
   "os": "iOS Simulator (iPhone Air)",
-  "sourceRevision": "24439cc08753b45fa557acf5a0aa505d4a994344",
+  "sourceRevision": "d45cb0b057de04d94dd5110c1cd58258f6c5d794",
   "sourceBranch": "codex/ios-same-app",
   "fixture": {
     "fixtureId": "p0-demo-ledger-2026-08-v1",
@@ -43,5 +43,5 @@
   "canonicalRouteIds": [
     "ai-search"
   ],
-  "generatedAt": "2026-09-03T12:44:15.658195+00:00"
+  "generatedAt": "2026-09-03T14:48:50.265355+00:00"
 }

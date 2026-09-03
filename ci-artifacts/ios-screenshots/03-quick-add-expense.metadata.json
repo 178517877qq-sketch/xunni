@@ -1,15 +1,15 @@
 {
   "schemaVersion": 2,
   "captureStatus": "captured",
-  "imagePath": "screenshots/03-quick-add-expense.png",
-  "sidecarPath": "screenshots/03-quick-add-expense.metadata.json",
-  "imageSha256": "55F7E65DED428F7E377CE5B3B6AC4B0BB02BD69E992669B9641042E559E85F19",
+  "imagePath": "ci-artifacts/ios-screenshots/03-quick-add-expense.png",
+  "sidecarPath": "ci-artifacts/ios-screenshots/03-quick-add-expense.metadata.json",
+  "imageSha256": "328FB7284F5C2417325E6E9CFD152A17A01CF6C50F671E7CB6EBAAB8A7E1602A",
   "width": 1260,
   "height": 2736,
   "platform": "ios",
   "device": "iPhone Air",
   "os": "iOS Simulator (iPhone Air)",
-  "sourceRevision": "24439cc08753b45fa557acf5a0aa505d4a994344",
+  "sourceRevision": "d45cb0b057de04d94dd5110c1cd58258f6c5d794",
   "sourceBranch": "codex/ios-same-app",
   "fixture": {
     "fixtureId": "p0-demo-ledger-2026-08-v1",
@@ -43,5 +43,5 @@
   "canonicalRouteIds": [
     "quick-add-expense"
   ],
-  "generatedAt": "2026-09-03T12:44:15.658195+00:00"
+  "generatedAt": "2026-09-03T14:48:50.265355+00:00"
 }
