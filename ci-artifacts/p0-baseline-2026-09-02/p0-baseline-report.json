@@ -1,0 +1,2283 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "p0-2026-09-02",
+  "git": {
+    "revision": "e0e0fbd83fd7f6ee823a3659405f48fd470c5df4",
+    "branch": "feature/ai-model-selector",
+    "dirty": true,
+    "dirtyEntryCount": 334
+  },
+  "sourceChecks": [
+    {
+      "name": "Android version",
+      "expected": "1.289.0+304",
+      "actual": "1.289.0+304",
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Android build watermark",
+      "expected": "b0901-304",
+      "actual": "b0901-304",
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Android database version",
+      "expected": 49,
+      "actual": 49,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "iOS version",
+      "expected": "1.286.0+300",
+      "actual": "1.286.0+300",
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "iOS deployment target",
+      "expected": "26.0",
+      "actual": "26.0",
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Fixture hash is self-consistent",
+      "expected": "sha256:b061ac4951eb7960e56c57e09e27d6ac2858e21d3560a9de07688841d746f722",
+      "actual": "sha256:b061ac4951eb7960e56c57e09e27d6ac2858e21d3560a9de07688841d746f722",
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Manifest fixture date",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Android compile-time fixture date",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Android fixture uses AppClock",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "iOS fixture date injection",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "iOS timezone injection",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "iOS demo clock reads fixture environment",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "iOS import review uses dedicated demo root",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "iOS import review route has XCTest coverage",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Fixture id declared",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Android expected income",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Android expected expense",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Android expected budget",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Golden scenario declared: home-overview",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Golden scenario declared: quick-add",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Golden scenario declared: quick-add-income",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Golden scenario declared: transactions",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Golden scenario declared: stats-month",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Golden scenario declared: budget",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Golden scenario declared: reimburse",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Golden scenario declared: reimburse-settlement",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Route review declared: books",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Route review declared: accounts",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Route review declared: reconcile",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Route review declared: liabilities",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Route review declared: net-worth",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "Route review declared: import-review",
+      "expected": true,
+      "actual": true,
+      "status": "pass",
+      "required": true
+    },
+    {
+      "name": "iOS workflow routes match manifest",
+      "expected": [
+        "ai",
+        "home",
+        "quickadd",
+        "quickadd/income",
+        "settings",
+        "settings/accounts",
+        "settings/accounts/detail",
+        "settings/ai",
+        "settings/ai-diagnostics",
+        "settings/ai-extensions",
+        "settings/ai-local",
+        "settings/ai-memory",
+        "settings/ai-schedules",
+        "settings/ai-search",
+        "settings/ai-tasks",
+        "settings/assets",
+        "settings/assets/detail",
+        "settings/backup",
+        "settings/books",
+        "settings/budget",
+        "settings/categories",
+        "settings/display",
+        "settings/import-review",
+        "settings/liabilities",
+        "settings/memory",
+        "settings/net-worth",
+        "settings/reconcile",
+        "settings/recurring",
+        "settings/reimburse",
+        "settings/reimburse/settlement",
+        "settings/reports",
+        "settings/savings",
+        "settings/tags",
+        "settings/theme",
+        "stats/custom",
+        "stats/month",
+        "stats/week",
+        "stats/year",
+        "transactions"
+      ],
+      "actual": [
+        "ai",
+        "home",
+        "quickadd",
+        "quickadd/income",
+        "settings",
+        "settings/accounts",
+        "settings/accounts/detail",
+        "settings/ai",
+        "settings/ai-diagnostics",
+        "settings/ai-extensions",
+        "settings/ai-local",
+        "settings/ai-memory",
+        "settings/ai-schedules",
+        "settings/ai-search",
+        "settings/ai-tasks",
+        "settings/assets",
+        "settings/assets/detail",
+        "settings/backup",
+        "settings/books",
+        "settings/budget",
+        "settings/categories",
+        "settings/display",
+        "settings/import-review",
+        "settings/liabilities",
+        "settings/memory",
+        "settings/net-worth",
+        "settings/reconcile",
+        "settings/recurring",
+        "settings/reimburse",
+        "settings/reimburse/settlement",
+        "settings/reports",
+        "settings/savings",
+        "settings/tags",
+        "settings/theme",
+        "stats/custom",
+        "stats/month",
+        "stats/week",
+        "stats/year",
+        "transactions"
+      ],
+      "status": "pass",
+      "required": true
+    }
+  ],
+  "captureChecks": [
+    {
+      "id": "home-overview",
+      "feature": "首页月度总览",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\home-overview-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\01-home.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "quick-add",
+      "feature": "手动记账",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\quick-add-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\02-quickadd.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "transactions",
+      "feature": "交易明细与搜索",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\transactions-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\03-transactions.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "stats-week",
+      "feature": "周统计",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\stats-week-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\04-stats-week.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "stats-month",
+      "feature": "月统计",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\stats-month-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\05-stats-month.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "stats-year",
+      "feature": "年统计",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\stats-year-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\06-stats-year.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "stats-custom",
+      "feature": "自定义统计区间",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\stats-custom-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\07-stats-custom.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "budget",
+      "feature": "预算与今日可花",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\budget-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\08-budget.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "reconcile",
+      "feature": "账户对账",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\reconcile-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\09-reconcile.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "reimburse",
+      "feature": "待报销",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\reimburse-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\10-reimburse.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "savings",
+      "feature": "存钱目标",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\savings-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\11-savings.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "recurring",
+      "feature": "定时记账",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\recurring-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\12-recurring.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "assets",
+      "feature": "资产管理",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\assets-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\13-assets.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "liabilities",
+      "feature": "负债管理",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\liabilities-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\14-liabilities.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "net-worth",
+      "feature": "净资产",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\net-worth-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\15-net-worth.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "books",
+      "feature": "账本管理",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\books-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\16-books.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "accounts",
+      "feature": "账户管理",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\accounts-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\17-accounts.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "categories",
+      "feature": "分类管理",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\categories-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\18-categories.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "tags",
+      "feature": "标签管理",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\tags-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\19-tags.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "settings",
+      "feature": "设置与数据管理",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\settings-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\20-settings.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "ai",
+      "feature": "AI 记账入口",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\ai-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\21-ai.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "ai-settings",
+      "feature": "AI 服务商与模型设置",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\ai-settings-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\22-ai-settings.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "import-review",
+      "feature": "账单导入复核与商户批量分类",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\import-review-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\23-import-review.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "reports",
+      "feature": "报告库与月报阅读",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\reports-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\24-reports.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "memory",
+      "feature": "喵学到的分类",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\memory-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\25-memory.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "ai-tasks",
+      "feature": "AI 任务中心",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\ai-tasks-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\26-ai-tasks.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "ai-diagnostics",
+      "feature": "AI 诊断",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\ai-diagnostics-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\27-ai-diagnostics.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "ai-search",
+      "feature": "AI 统一搜索",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\ai-search-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\28-ai-search.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "ai-memory",
+      "feature": "AI 可控记忆",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\ai-memory-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\29-ai-memory.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "ai-extensions",
+      "feature": "AI 技能与连接",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\ai-extensions-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\30-ai-extensions.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "ai-schedules",
+      "feature": "AI 定时报表",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\ai-schedules-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\31-ai-schedules.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "ai-local",
+      "feature": "本地模型伴侣",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\ai-local-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\32-ai-local.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "backup",
+      "feature": "备份与恢复",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\backup-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\33-backup.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "theme",
+      "feature": "主题外观",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\theme-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\34-theme.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "display",
+      "feature": "账单与聊天显示",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\display-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\35-display.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "quick-add-income",
+      "feature": "收入记账操作态",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\quickadd-income-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\37-quickadd-income.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "asset-detail",
+      "feature": "物品资产详情操作态",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\asset-detail-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\38-assets-detail.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "account-detail",
+      "feature": "账户详情操作态",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\account-detail-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\39-account-detail.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    },
+    {
+      "id": "reimburse-settlement",
+      "feature": "报销到账操作态",
+      "android": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\reimburse-settlement-android.png",
+        "size": [
+          1080,
+          1920
+        ],
+        "expectedSize": [
+          1080,
+          1920
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.0,
+        "reason": null
+      },
+      "ios": {
+        "status": "pass",
+        "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\40-reimburse-settlement.png",
+        "size": [
+          1260,
+          2736
+        ],
+        "expectedSize": [
+          1260,
+          2736
+        ],
+        "alphaMin": 255,
+        "alphaMax": 255,
+        "nearBlackRatio": 0.004395,
+        "reason": null
+      },
+      "metadata": {
+        "android": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\parity-run92-android-fixed\\capture-metadata.json",
+          "reason": "metadata missing"
+        },
+        "ios": {
+          "status": "unprovenanced",
+          "path": "C:\\src\\xunni-codex\\ci-artifacts\\ios-screenshots\\capture-metadata.json",
+          "reason": "metadata missing"
+        }
+      },
+      "status": "incomplete"
+    }
+  ],
+  "routeReview": [
+    {
+      "id": "books",
+      "androidCurrentCapture": "home drawer / 我的账本",
+      "iosDeclaredRoute": "settings/books",
+      "status": "decision-required",
+      "action": "Confirm whether Android's canonical product surface is the drawer entry or the dedicated book-management list; do not compare different surfaces under one id."
+    },
+    {
+      "id": "accounts",
+      "androidCurrentCapture": "资产管理 > 资金",
+      "iosDeclaredRoute": "settings/accounts",
+      "status": "decision-required",
+      "action": "Confirm whether the Android production entry is the asset hub funds tab or a dedicated account-management page; then make the iOS route represent the same surface."
+    },
+    {
+      "id": "reconcile",
+      "androidCurrentCapture": "资产管理 > 资金",
+      "iosDeclaredRoute": "settings/reconcile",
+      "status": "decision-required",
+      "action": "Confirm the Android user path to reconciliation. The current capture is not evidence for the iOS reconciliation page."
+    },
+    {
+      "id": "liabilities",
+      "androidCurrentCapture": "资产管理 > 资金",
+      "iosDeclaredRoute": "settings/liabilities",
+      "status": "decision-required",
+      "action": "Confirm whether Android exposes a dedicated liability surface or a funds-tab section before changing either app."
+    },
+    {
+      "id": "net-worth",
+      "androidCurrentCapture": "资产管理 > 总览",
+      "iosDeclaredRoute": "settings/net-worth",
+      "status": "decision-required",
+      "action": "Use the Android asset-hub overview as the canonical information hierarchy unless the actual Android entry is proven otherwise."
+    },
+    {
+      "id": "import-review",
+      "androidCurrentCapture": "导入复核 production page",
+      "iosDeclaredRoute": "settings/import-review",
+      "status": "expected",
+      "action": "The iOS demo launch must render the review page itself; a home screenshot is invalid evidence."
+    }
+  ],
+  "overall": "P0_PARTIAL",
+  "sourceStatus": "PASS",
+  "captureStatus": "INCOMPLETE"
+}
